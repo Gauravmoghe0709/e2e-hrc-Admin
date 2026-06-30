@@ -1,0 +1,282 @@
+import { useState } from "react";
+import {
+  Home,
+  Info,
+  Building2,
+  FileText,
+  MessageSquareText,
+  LogOut,
+  X,
+  ChevronRight,
+  ChevronDown,
+  Circle,
+  Users,
+} from "lucide-react";
+import { NavLink, useLocation } from "react-router-dom";
+
+const sidebarItems = [
+  { title: "Home", icon: Home, path: "/admin/home" },
+  { title: "About Us", icon: Info, path: "/admin/about-us" },
+  { title: "Employer", icon: Building2, path: "/admin/employer" },
+  { title: "Employee", icon: Users, path: "/admin/employee" },
+  {
+    title: "Blogs",
+    icon: FileText,
+    path: "/admin/blogs/management",
+    children: [
+      { title: "Blog Services", path: "/admin/blogs/services" },
+      { title: "Blog Management", path: "/admin/blogs/management" },
+    ],
+  },
+  {
+    title: "Contact Us",
+    icon: MessageSquareText,
+    path: "/admin/contact/enquiries",
+    children: [
+      { title: "Contact Settings", path: "/admin/contact/settings" },
+      { title: "Contact Enquiries", path: "/admin/contact/enquiries" },
+    ],
+  },
+];
+
+export default function Sidebar({ isOpen, setIsOpen }) {
+  const location = useLocation();
+
+  // Track which parent menus are expanded
+  const [expandedMenus, setExpandedMenus] = useState(() => {
+    // Auto-expand if currently on a child route
+    const initial = {};
+    sidebarItems.forEach((item) => {
+      if (item.children) {
+        // e.g. path starts with /admin/blogs or /admin/contact
+        const basePath = item.path.split("/").slice(0, 3).join("/");
+        initial[item.title] = location.pathname.startsWith(basePath);
+      }
+    });
+    return initial;
+  });
+
+  const toggleExpand = (title) => {
+    setExpandedMenus((prev) => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  return (
+    <>
+      {/* ── Overlay ────────────────────────────────────────────── */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
+        />
+      )}
+
+      {/* ── Sidebar ────────────────────────────────────────────── */}
+      <aside
+        className={`
+          fixed top-0 left-0 h-screen w-72 bg-white border-r border-gray-200 z-50
+          flex flex-col
+          transition-transform duration-300 ease-in-out
+          ${isOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:translate-x-0
+          shadow-xl lg:shadow-none
+        `}
+      >
+        {/* ── Logo ─────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-5 h-16 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            {/* Brand icon */}
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-400 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-orange-200 flex-shrink-0">
+              e2
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-[15px] font-bold text-gray-900 tracking-tight">e2e Hrc</span>
+              <span className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-0.5">
+                Admin Panel
+              </span>
+            </div>
+          </div>
+
+          {/* Close – mobile only */}
+          <button
+            className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            onClick={() => setIsOpen(false)}
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* ── Section label ──────────────────────────────────────── */}
+        <p className="px-5 pt-5 pb-2 text-[10px] font-semibold tracking-widest uppercase text-gray-400">
+          Main Menu
+        </p>
+
+        {/* ── Navigation ─────────────────────────────────────────── */}
+        <nav className="flex-1 overflow-y-auto px-3 pb-3 scrollbar-none">
+          {sidebarItems.map((item) => {
+            const Icon = item.icon;
+            const hasChildren = item.children && item.children.length > 0;
+            const basePath = item.path.split("/").slice(0, 3).join("/");
+            const isParentActive = location.pathname.startsWith(basePath);
+            const isExpanded = expandedMenus[item.title];
+
+            if (hasChildren) {
+              return (
+                <div key={item.title}>
+                  {/* Parent Item Button */}
+                  <button
+                    onClick={() => toggleExpand(item.title)}
+                    className={`
+                      group relative flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5 w-full text-left
+                      text-[13.5px] font-medium cursor-pointer
+                      border transition-all duration-200
+                      ${isParentActive
+                        ? "bg-orange-50 border-orange-200 text-orange-600"
+                        : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-100 hover:text-gray-800"
+                      }
+                    `}
+                  >
+                    {/* Active left pip */}
+                    {isParentActive && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gradient-to-b from-orange-500 to-orange-400 rounded-r-full" />
+                    )}
+
+                    {/* Icon wrap */}
+                    <span
+                      className={`
+                        flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0
+                        transition-colors duration-200
+                        ${isParentActive
+                          ? "bg-orange-100 text-orange-500"
+                          : "bg-gray-100 text-gray-400 group-hover:bg-orange-50 group-hover:text-orange-400"
+                        }
+                      `}
+                    >
+                      <Icon size={16} />
+                    </span>
+
+                    {/* Label */}
+                    <span className="flex-1 truncate">{item.title}</span>
+
+                    {/* Expand chevron */}
+                    <ChevronDown
+                      size={14}
+                      className={`flex-shrink-0 transition-transform duration-200 ${
+                        isExpanded ? "rotate-180 text-orange-400" : "text-gray-400"
+                      }`}
+                    />
+                  </button>
+
+                  {/* Children */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isExpanded ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <div className="ml-4 pl-4 border-l-2 border-orange-100 mb-1 space-y-0.5">
+                      {item.children.map((child) => {
+                        return (
+                          <NavLink
+                            key={child.path}
+                            to={child.path}
+                            onClick={() => setIsOpen(false)}
+                            className={({ isActive }) => `
+                              group relative flex items-center gap-2.5 px-3 py-2 rounded-lg
+                              text-[13px] font-medium cursor-pointer
+                              border transition-all duration-200 no-underline
+                              ${isActive
+                                ? "bg-orange-50 border-orange-200 text-orange-600"
+                                : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-100 hover:text-gray-700"
+                              }
+                            `}
+                          >
+                            {({ isActive }) => (
+                              <>
+                                <span className={`
+                                  flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0
+                                  transition-colors duration-200
+                                  ${isActive ? "text-orange-500" : "text-gray-300 group-hover:text-orange-400"}
+                                `}>
+                                  <Circle size={8} fill={isActive ? "currentColor" : "none"} />
+                                </span>
+                                <span className="flex-1 truncate">{child.title}</span>
+                              </>
+                            )}
+                          </NavLink>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Regular item (no children)
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsOpen(false)}
+                className={({ isActive }) => `
+                  group relative flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5
+                  text-[13.5px] font-medium cursor-pointer
+                  border transition-all duration-200 no-underline
+                  ${isActive
+                    ? "bg-orange-50 border-orange-200 text-orange-600"
+                    : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-100 hover:text-gray-800"
+                  }
+                `}
+              >
+                {({ isActive }) => (
+                  <>
+                    {/* Active left pip */}
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gradient-to-b from-orange-500 to-orange-400 rounded-r-full" />
+                    )}
+
+                    {/* Icon wrap */}
+                    <span
+                      className={`
+                        flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0
+                        transition-colors duration-200
+                        ${isActive
+                          ? "bg-orange-100 text-orange-500"
+                          : "bg-gray-100 text-gray-400 group-hover:bg-orange-50 group-hover:text-orange-400"
+                        }
+                      `}
+                    >
+                      <Icon size={16} />
+                    </span>
+
+                    {/* Label */}
+                    <span className="flex-1 truncate">{item.title}</span>
+
+                    {/* Trailing chevron */}
+                    <ChevronRight
+                      size={13}
+                      className={`
+                        flex-shrink-0 transition-all duration-200
+                        ${isActive
+                          ? "opacity-100 text-orange-400"
+                          : "opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 text-gray-300"
+                        }
+                      `}
+                    />
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* ── Bottom: logout ──────────────────────────────────────── */}
+        <div className="flex-shrink-0 border-t border-gray-100 p-3 space-y-2">
+          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-red-100 bg-red-50 text-red-400 text-[13px] font-medium hover:bg-red-100 hover:text-red-500 hover:border-red-200 transition-colors duration-200">
+            <LogOut size={16} className="flex-shrink-0" />
+            <span>Sign out</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
