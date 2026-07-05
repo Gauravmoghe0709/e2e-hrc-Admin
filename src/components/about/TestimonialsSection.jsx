@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Plus, Edit2, Trash2, Image as ImageIcon, X, Save, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Plus, Edit2, Trash2, X, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getAboutTestimonials, createAboutTestimonial, updateAboutTestimonial, deleteAboutTestimonial, uploadAboutTestimonialImage } from '../../services/api';
+import { getAboutTestimonials, createAboutTestimonial, updateAboutTestimonial, deleteAboutTestimonial } from '../../services/api';
 
 const EMPTY_FORM = {
-  name: '',
-  designation: '',
-  quote: '',
-  profileImage: '',
+  badgeText: 'Testimonials',
+  sectionTitle: 'What They Are Saying',
+  highlightText: 'Saying',
+  sectionDescription: 'Discover the stories and experiences of individuals and companies who have found success and excellence through E2E HRC.',
+  testimonialTitle: '',
+  review: '',
+  companyName: '',
   order: 0,
-  isActive: true
+  isActive: true,
 };
 
 export default function TestimonialsSection() {
@@ -24,8 +27,6 @@ export default function TestimonialsSection() {
 
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
-  const [imageFile, setImageFile] = useState(null);
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadTestimonials();
@@ -45,47 +46,30 @@ export default function TestimonialsSection() {
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image must be less than 5MB');
-        return;
-      }
-      setImageFile(file);
-      setFormData(prev => ({ ...prev, profileImage: URL.createObjectURL(file) }));
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const removeImage = () => {
-    setImageFile(null);
-    setFormData(prev => ({ ...prev, profileImage: '' }));
   };
 
   const openAddModal = () => {
     setEditingId(null);
-    setImageFile(null);
     setFormData({ ...EMPTY_FORM, order: testimonials.length + 1 });
     setIsModalOpen(true);
   };
 
   const openEditModal = (item) => {
     setEditingId(item._id);
-    setImageFile(null);
     setFormData({
-      name: item.name || '',
-      designation: item.designation || '',
-      quote: item.quote || '',
-      profileImage: item.profileImage || '',
+      badgeText: item.badgeText || 'Testimonials',
+      sectionTitle: item.sectionTitle || 'What They Are Saying',
+      highlightText: item.highlightText || 'Saying',
+      sectionDescription: item.sectionDescription || 'Discover the stories and experiences of individuals and companies who have found success and excellence through E2E HRC.',
+      testimonialTitle: item.testimonialTitle || '',
+      review: item.review || '',
+      companyName: item.companyName || '',
       order: item.order ?? 0,
-      isActive: item.isActive ?? true
+      isActive: item.isActive ?? true,
     });
     setIsModalOpen(true);
   };
@@ -96,36 +80,29 @@ export default function TestimonialsSection() {
   };
 
   const saveTestimonial = async () => {
-    if (!formData.name.trim() || !formData.quote.trim()) {
-      toast.error('Name and quote are required');
+    if (!formData.review.trim()) {
+      toast.error('Review text is required');
       return;
     }
 
     setIsSaving(true);
     try {
-      let savedItem;
       const payload = {
-        name: formData.name,
-        designation: formData.designation,
-        quote: formData.quote,
+        badgeText: formData.badgeText,
+        sectionTitle: formData.sectionTitle,
+        highlightText: formData.highlightText,
+        sectionDescription: formData.sectionDescription,
+        testimonialTitle: formData.testimonialTitle,
+        review: formData.review,
+        companyName: formData.companyName,
         order: Number(formData.order),
-        isActive: formData.isActive
+        isActive: formData.isActive,
       };
 
       if (editingId) {
-        const res = await updateAboutTestimonial(editingId, payload);
-        savedItem = res.data;
+        await updateAboutTestimonial(editingId, payload);
       } else {
-        const res = await createAboutTestimonial(payload);
-        savedItem = res.data;
-      }
-
-      if (imageFile && savedItem._id) {
-        try {
-          await uploadAboutTestimonialImage(savedItem._id, imageFile);
-        } catch (imgErr) {
-          toast.error('Testimonial saved but image upload failed');
-        }
+        await createAboutTestimonial(payload);
       }
 
       toast.success(editingId ? 'Testimonial updated successfully' : 'Testimonial added successfully');
@@ -153,27 +130,29 @@ export default function TestimonialsSection() {
     }
   };
 
-  // Truncate text for table preview
-  const truncate = (str, len = 60) => (str && str.length > len ? str.slice(0, len) + '…' : str);
+  const truncate = (str, len = 60) => (str && str.length > len ? `${str.slice(0, len)}…` : str);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       <div
-        className="flex items-center justify-between p-5 bg-gray-50 border-b border-gray-200 cursor-pointer select-none"
+        className="flex cursor-pointer select-none items-center justify-between border-b border-gray-200 bg-gray-50 p-5"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-gray-800">Testimonials Section</h2>
           {isLoading ? (
-            <span className="bg-gray-100 text-gray-400 text-xs font-bold px-2 py-1 rounded-md animate-pulse">Loading...</span>
+            <span className="animate-pulse rounded-md bg-gray-100 px-2 py-1 text-xs font-bold text-gray-400">Loading...</span>
           ) : (
-            <span className="bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded-md">{testimonials.length} Items</span>
+            <span className="rounded-md bg-orange-100 px-2 py-1 text-xs font-bold text-orange-600">{testimonials.length} Items</span>
           )}
         </div>
         <div className="flex items-center gap-4">
           <button
-            onClick={(e) => { e.stopPropagation(); openAddModal(); }}
-            className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              openAddModal();
+            }}
+            className="flex items-center gap-1 rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600"
           >
             <Plus size={16} /> Add Testimonial
           </button>
@@ -182,53 +161,45 @@ export default function TestimonialsSection() {
       </div>
 
       {isExpanded && (
-        <div className="p-0 overflow-x-auto">
+        <div className="overflow-x-auto p-0">
           {isLoading ? (
-            <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-orange-500" size={32} /></div>
-          ) : testimonials.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              No testimonials added yet. Click "Add Testimonial" to create one.
+            <div className="flex justify-center p-8">
+              <Loader2 className="animate-spin text-orange-500" size={32} />
             </div>
+          ) : testimonials.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">No testimonials added yet. Click "Add Testimonial" to create one.</div>
           ) : (
-            <table className="w-full text-left border-collapse">
+            <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="bg-white border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500">
-                  <th className="p-4 font-medium">Image</th>
-                  <th className="p-4 font-medium">Name</th>
-                  <th className="p-4 font-medium">Quote</th>
+                <tr className="border-b border-gray-200 bg-white text-xs uppercase tracking-wider text-gray-500">
+                  <th className="p-4 font-medium">Title</th>
+                  <th className="p-4 font-medium">Review</th>
+                  <th className="p-4 font-medium hidden sm:table-cell">Company</th>
                   <th className="p-4 font-medium hidden sm:table-cell">Order</th>
                   <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium text-right">Actions</th>
+                  <th className="p-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {testimonials.map((item) => (
-                  <tr key={item._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4">
-                      {item.profileImage ? (
-                        <img src={item.profileImage} alt={item.name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
-                          <ImageIcon size={16} />
-                        </div>
-                      )}
+                  <tr key={item._id} className="transition-colors hover:bg-gray-50">
+                    <td className="p-4 text-sm font-semibold text-gray-800">
+                      {item.testimonialTitle || 'Client Feedback'}
+                      <p className="text-xs font-normal text-gray-500">{item.companyName}</p>
                     </td>
-                    <td className="p-4 font-semibold text-gray-800 text-sm">
-                      {item.name}
-                      <p className="text-xs text-gray-500 font-normal">{item.designation}</p>
-                    </td>
-                    <td className="p-4 text-sm text-gray-500 max-w-xs">{truncate(item.quote)}</td>
-                    <td className="p-4 hidden sm:table-cell text-sm text-gray-500">{item.order}</td>
+                    <td className="max-w-xs p-4 text-sm text-gray-500">{truncate(item.review)}</td>
+                    <td className="hidden p-4 text-sm text-gray-500 sm:table-cell">{item.companyName}</td>
+                    <td className="hidden p-4 text-sm text-gray-500 sm:table-cell">{item.order}</td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${item.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${item.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                         {item.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="p-4 text-right space-x-2">
-                      <button onClick={() => openEditModal(item)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                    <td className="space-x-2 p-4 text-right">
+                      <button onClick={() => openEditModal(item)} className="rounded-md p-1.5 text-blue-500 transition-colors hover:bg-blue-50" title="Edit">
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => openDeleteModal(item._id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                      <button onClick={() => openDeleteModal(item._id)} className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50" title="Delete">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -240,87 +211,75 @@ export default function TestimonialsSection() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-bold text-gray-800">{editingId ? 'Edit Testimonial' : 'Add Testimonial'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 transition-colors hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
-                    <input type="text" name="name" value={formData.name} onChange={handleFormChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. Jane Doe" />
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Badge Text</label>
+                    <input type="text" name="badgeText" value={formData.badgeText} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. Testimonials" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
-                    <input type="text" name="designation" value={formData.designation} onChange={handleFormChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. HR Manager" />
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Section Title</label>
+                    <input type="text" name="sectionTitle" value={formData.sectionTitle} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. What They Are Saying" />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Quote <span className="text-red-500">*</span></label>
-                    <textarea name="quote" value={formData.quote} onChange={handleFormChange} rows={4} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none" placeholder="Testimonial text..." />
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Highlight Text</label>
+                    <input type="text" name="highlightText" value={formData.highlightText} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. Saying" />
                   </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Section Description</label>
+                    <textarea name="sectionDescription" value={formData.sectionDescription} onChange={handleFormChange} rows={3} className="w-full resize-none rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="Section intro text..." />
+                  </div>
+                </div>
 
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Testimonial Title</label>
+                    <input type="text" name="testimonialTitle" value={formData.testimonialTitle} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. Efficient and Effective Hiring Process!" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Review <span className="text-red-500">*</span></label>
+                    <textarea name="review" value={formData.review} onChange={handleFormChange} rows={5} className="w-full resize-none rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="Testimonial review text..." />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Company Name</label>
+                    <input type="text" name="companyName" value={formData.companyName} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. Ford" />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
-                      <input type="number" name="order" value={formData.order} onChange={handleFormChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" />
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Display Order</label>
+                      <input type="number" name="order" value={formData.order} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
                       <div className="mt-2 flex items-center gap-2">
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleFormChange} className="sr-only peer" />
-                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                        <label className="relative inline-flex cursor-pointer items-center">
+                          <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleFormChange} className="peer sr-only" />
+                          <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-focus:outline-none"></div>
                         </label>
                         <span className="text-sm text-gray-600">{formData.isActive ? 'Active' : 'Inactive'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Profile Image</label>
-                    <div className="mt-1 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center relative overflow-hidden group h-48">
-                      {formData.profileImage ? (
-                        <>
-                          <img src={formData.profileImage} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm mr-2">
-                              Change
-                            </button>
-                            <button type="button" onClick={removeImage} className="bg-white text-red-500 hover:text-red-600 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm">
-                              <X size={14} /> Remove
-                            </button>
-                          </div>
-                          <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                        </>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full text-gray-400 hover:text-orange-500 transition-colors">
-                          <ImageIcon size={24} className="mb-2" />
-                          <span className="text-xs font-medium">Upload Image</span>
-                          <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3 rounded-b-xl">
-              <button onClick={() => setIsModalOpen(false)} disabled={isSaving} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-end gap-3 rounded-b-xl border-t border-gray-200 bg-gray-50 px-6 py-4">
+              <button onClick={() => setIsModalOpen(false)} disabled={isSaving} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 Cancel
               </button>
-              <button onClick={saveTestimonial} disabled={isSaving} className="px-4 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 transition-colors shadow-sm flex items-center gap-2">
+              <button onClick={saveTestimonial} disabled={isSaving} className="flex items-center gap-2 rounded-lg border border-transparent bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-orange-600">
                 {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
                 {isSaving ? 'Saving...' : 'Save Testimonial'}
               </button>
@@ -329,20 +288,19 @@ export default function TestimonialsSection() {
         </div>
       )}
 
-      {/* Delete Confirmation */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4">
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm overflow-hidden rounded-xl bg-white p-6 text-center shadow-xl">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-500">
               <Trash2 size={24} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Testimonial?</h3>
-            <p className="text-sm text-gray-500 mb-6">Are you sure you want to delete this testimonial? This action cannot be undone.</p>
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Delete Testimonial?</h3>
+            <p className="mb-6 text-sm text-gray-500">Are you sure you want to delete this testimonial? This action cannot be undone.</p>
             <div className="flex items-center justify-center gap-3">
-              <button onClick={() => setIsDeleteModalOpen(false)} disabled={isDeleting} className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              <button onClick={() => setIsDeleteModalOpen(false)} disabled={isDeleting} className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 Cancel
               </button>
-              <button onClick={deleteTestimonial} disabled={isDeleting} className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 border border-transparent rounded-lg hover:bg-red-600 transition-colors shadow-sm flex items-center justify-center gap-2">
+              <button onClick={deleteTestimonial} disabled={isDeleting} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-transparent bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-600">
                 {isDeleting ? <Loader2 size={16} className="animate-spin" /> : null}
                 {isDeleting ? 'Deleting...' : 'Yes, Delete'}
               </button>

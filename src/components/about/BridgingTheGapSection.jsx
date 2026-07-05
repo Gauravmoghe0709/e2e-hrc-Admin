@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, Image as ImageIcon, X, Save, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getBridgingTheGap, saveBridgingTheGap, uploadBridgingTheGapImage } from '../../services/api';
+import { getBridgingTheGap, createBridgingTheGap, updateBridgingTheGap, uploadBridgingTheGapImage } from '../../services/api';
 
 const EMPTY_FORM = {
   heading: '',
   description: '',
-  feature1: '',
-  feature2: '',
-  feature3: '',
   image: '',
   isActive: true,
 };
@@ -18,6 +15,7 @@ export default function BridgingTheGapSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [data, setData] = useState(EMPTY_FORM);
+  const [features, setFeatures] = useState(['']);
   const [imageFile, setImageFile] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -31,6 +29,12 @@ export default function BridgingTheGapSection() {
       const res = await getBridgingTheGap();
       if (res && res.data) {
         setData({ ...EMPTY_FORM, ...res.data });
+        const loadedFeatures = [res.data.feature1 || '', res.data.feature2 || '', res.data.feature3 || ''];
+        const hasFeatureValue = loadedFeatures.some((feature) => feature.toString().trim() !== '');
+        setFeatures(hasFeatureValue ? loadedFeatures : ['']);
+      } else {
+        setData(EMPTY_FORM);
+        setFeatures(['']);
       }
     } catch (error) {
       if (!error.message?.includes('404')) {
@@ -43,10 +47,26 @@ export default function BridgingTheGapSection() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setData(prev => ({
+    setData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  const handleFeatureChange = (index, value) => {
+    setFeatures((prev) => prev.map((feature, idx) => (idx === index ? value : feature)));
+  };
+
+  const handleAddFeature = () => {
+    if (features.length >= 3) return;
+    setFeatures((prev) => [...prev, '']);
+  };
+
+  const handleRemoveFeature = (index) => {
+    setFeatures((prev) => {
+      const next = prev.filter((_, idx) => idx !== index);
+      return next.length ? next : [''];
+    });
   };
 
   const handleImageChange = (e) => {
@@ -57,14 +77,14 @@ export default function BridgingTheGapSection() {
         return;
       }
       setImageFile(file);
-      setData(prev => ({ ...prev, image: URL.createObjectURL(file) }));
+      setData((prev) => ({ ...prev, image: URL.createObjectURL(file) }));
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const removeImage = () => {
     setImageFile(null);
-    setData(prev => ({ ...prev, image: '' }));
+    setData((prev) => ({ ...prev, image: '' }));
   };
 
   const handleSave = async () => {
@@ -72,26 +92,50 @@ export default function BridgingTheGapSection() {
       toast.error('Heading is required');
       return;
     }
+
     setIsSaving(true);
     try {
-      let currentImage = data.image;
-      if (imageFile) {
-        const uploadRes = await uploadBridgingTheGapImage(imageFile);
-        if (uploadRes.success) {
-          currentImage = uploadRes.data.image;
-          setImageFile(null);
+      let res;
+      if (data._id) {
+        if (imageFile) {
+          const uploadRes = await uploadBridgingTheGapImage(imageFile, data._id);
+          if (uploadRes && uploadRes.data) {
+            setData((prev) => ({ ...prev, image: uploadRes.data.image || prev.image }));
+          }
         }
+
+        const payload = {
+          heading: data.heading.trim(),
+          description: data.description || '',
+          feature1: features[0] || '',
+          feature2: features[1] || '',
+          feature3: features[2] || '',
+          isActive: data.isActive === false ? false : true,
+        };
+        res = await updateBridgingTheGap(data._id, payload);
+      } else {
+        const formData = new FormData();
+        formData.append('heading', data.heading.trim());
+        formData.append('description', data.description || '');
+        formData.append('feature1', features[0] || '');
+        formData.append('feature2', features[1] || '');
+        formData.append('feature3', features[2] || '');
+        formData.append('isActive', data.isActive === false ? 'false' : 'true');
+        if (imageFile) {
+          formData.append('image', imageFile);
+        }
+        res = await createBridgingTheGap(formData);
       }
-      
-      const res = await saveBridgingTheGap({
-        ...data,
-        image: currentImage
-      });
-      
+
       if (res && res.data) {
         setData({ ...EMPTY_FORM, ...res.data });
+        const loadedFeatures = [res.data.feature1 || '', res.data.feature2 || '', res.data.feature3 || ''];
+        const hasFeatureValue = loadedFeatures.some((feature) => feature.toString().trim() !== '');
+        setFeatures(hasFeatureValue ? loadedFeatures : ['']);
       }
+
       toast.success('Bridging The Gap saved successfully!');
+      await loadData();
     } catch (error) {
       toast.error(error.message || 'Failed to save Bridging The Gap');
     } finally {
@@ -101,7 +145,7 @@ export default function BridgingTheGapSection() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-      <div 
+      <div
         className="flex items-center justify-between p-5 bg-gray-50 border-b border-gray-200 cursor-pointer select-none"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -109,9 +153,9 @@ export default function BridgingTheGapSection() {
           <h2 className="text-lg font-semibold text-gray-800">Bridging The Gap Section</h2>
           <div className="flex items-center gap-2 ml-4">
             <span className="text-sm text-gray-500">Status:</span>
-            <label className="relative inline-flex items-center cursor-pointer" onClick={e => e.stopPropagation()}>
+            <label className="relative inline-flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
               <input type="checkbox" name="isActive" checked={data.isActive} onChange={handleChange} className="sr-only peer" />
-              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
             </label>
           </div>
         </div>
@@ -128,33 +172,71 @@ export default function BridgingTheGapSection() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Heading <span className="text-red-500">*</span></label>
-                    <input type="text" name="heading" value={data.heading} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. Bridging The Gap" />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea name="description" value={data.description} onChange={handleChange} rows={3} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none" placeholder="Enter description..." />
+                    <input
+                      type="text"
+                      name="heading"
+                      value={data.heading}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors"
+                      placeholder="e.g. Bridging The Gap"
+                    />
                   </div>
 
-                  <div className="space-y-3 pt-2">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Feature 1</label>
-                      <input type="text" name="feature1" value={data.feature1} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. Global Talent Pool" />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                      name="description"
+                      value={data.description}
+                      onChange={handleChange}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none"
+                      placeholder="Enter description..."
+                    />
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Features</label>
+                        <p className="text-xs text-gray-500">Add up to 3 features. Empty values will be saved as blank.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddFeature}
+                        disabled={features.length >= 3}
+                        className="text-sm px-3 py-1.5 rounded-lg border border-orange-500 text-orange-600 hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Add Feature
+                      </button>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Feature 2</label>
-                      <input type="text" name="feature2" value={data.feature2} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. Fast Placement" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Feature 3</label>
-                      <input type="text" name="feature3" value={data.feature3} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. Verified Professionals" />
-                    </div>
+
+                    {features.map((feature, index) => (
+                      <div key={`feature-${index}`} className="grid grid-cols-[1fr_auto] gap-3 items-start">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Feature {index + 1}</label>
+                          <input
+                            type="text"
+                            value={feature}
+                            onChange={(e) => handleFeatureChange(index, e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors"
+                            placeholder={`Feature ${index + 1}`}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFeature(index)}
+                          className="mt-7 inline-flex items-center justify-center px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Section Image</label>
-                  <div className="mt-1 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center relative overflow-hidden group min-h-[300px] h-[calc(100%-1.75rem)]">
+                  <div className="mt-1 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center relative overflow-hidden group min-h-75 h-[calc(100%-1.75rem)]">
                     {data.image ? (
                       <>
                         <img src={data.image} alt="Preview" className="w-full h-full object-cover" />

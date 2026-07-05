@@ -5,6 +5,7 @@ import { getAboutHero, saveAboutHero, uploadAboutHeroImage } from '../../service
 
 const EMPTY_FORM = {
   mainTitle: '',
+  subtitle: '',
   description: '',
   button1Text: '',
   button1Link: '',
@@ -31,7 +32,11 @@ export default function AboutHeroSection() {
     try {
       const res = await getAboutHero();
       if (res && res.data) {
-        setData({ ...EMPTY_FORM, ...res.data });
+        setData({
+          ...EMPTY_FORM,
+          ...res.data,
+          subtitle: res.data.subtitle ?? res.data.subTitle ?? '',
+        });
       }
     } catch (error) {
       if (!error.message?.includes('404')) {
@@ -75,22 +80,35 @@ export default function AboutHeroSection() {
     }
     setIsSaving(true);
     try {
-      let currentImage = data.heroImage;
-      if (imageFile) {
-        const uploadRes = await uploadAboutHeroImage(imageFile);
-        if (uploadRes.success) {
-          currentImage = uploadRes.data.heroImage;
-          setImageFile(null);
+      let res;
+      if (data._id) {
+        if (imageFile) {
+          const uploadRes = await uploadAboutHeroImage(imageFile, data._id);
+          if (uploadRes.success) {
+            setImageFile(null);
+            data.heroImage = uploadRes.data.heroImage;
+          }
         }
+        res = await saveAboutHero({ ...data });
+      } else {
+        res = await saveAboutHero({
+          subtitle: data.subtitle,
+          mainTitle: data.mainTitle,
+          description: data.description,
+          button1Text: data.button1Text,
+          button1Link: data.button1Link,
+          button2Text: data.button2Text,
+          button2Link: data.button2Link,
+          isActive: data.isActive,
+        }, imageFile);
       }
-      
-      const res = await saveAboutHero({
-        ...data,
-        heroImage: currentImage
-      });
-      
+
       if (res && res.data) {
-        setData({ ...EMPTY_FORM, ...res.data });
+        setData({
+          ...EMPTY_FORM,
+          ...res.data,
+          subtitle: res.data.subtitle ?? res.data.subTitle ?? '',
+        });
       }
       toast.success('About Hero saved successfully!');
     } catch (error) {
@@ -131,7 +149,12 @@ export default function AboutHeroSection() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Main Title <span className="text-red-500">*</span></label>
                     <input type="text" name="mainTitle" value={data.mainTitle} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="Enter main heading" />
                   </div>
-                  
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subtitle</label>
+                    <input type="text" name="subtitle" value={data.subtitle} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="Enter sub heading" />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea name="description" value={data.description} onChange={handleChange} rows={4} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none" placeholder="Enter hero description..." />

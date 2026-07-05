@@ -5,23 +5,21 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
-  getAllApproachCards,
-  createApproachCard,
-  updateApproachCard,
-  deleteApproachCard,
-  uploadApproachCardImage,
-} from '../../services/api';
+  getAdminWhyChoose,
+  createWhyChoose,
+  updateWhyChoose,
+  deleteWhyChoose,
+  uploadWhyChooseImage,
+} from '../../services/whyChooseService';
 
 const EMPTY_FORM = {
+  sectionTitle: 'Why Choose E2E HRC?',
+  sectionDescription: 'Delivering excellence through dedicated service and unparalleled market knowledge.',
   title: '',
-  subtitle: '',
   description: '',
+  icon: '',
   image: '',
-  stat1Value: '',
-  stat1Label: '',
-  stat2Value: '',
-  stat2Label: '',
-  displayOrder: 1,
+  order: 1,
   isActive: true,
 };
 
@@ -30,7 +28,6 @@ export default function WhyChooseUsSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [cards, setCards] = useState([]);
 
-  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -38,12 +35,10 @@ export default function WhyChooseUsSection() {
   const [imageFile, setImageFile] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ── Load all approach cards on mount ──────────────────────────────────────
   useEffect(() => {
     loadCards();
   }, []);
@@ -51,20 +46,19 @@ export default function WhyChooseUsSection() {
   const loadCards = async () => {
     setIsLoading(true);
     try {
-      const res = await getAllApproachCards();
+      const res = await getAdminWhyChoose();
       setCards(res.data || []);
     } catch (error) {
-      console.error('Failed to load approach cards:', error);
-      toast.error('Failed to load Why Choose Us cards');
+      console.error('Failed to load why choose cards:', error);
+      toast.error('Failed to load Why Choose cards');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Form handlers ──────────────────────────────────────────────────────────
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleImageChange = (e) => {
@@ -75,20 +69,25 @@ export default function WhyChooseUsSection() {
       return;
     }
     setImageFile(file);
-    setFormData(prev => ({ ...prev, image: URL.createObjectURL(file) }));
+    setFormData((prev) => ({ ...prev, image: URL.createObjectURL(file) }));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = () => {
     setImageFile(null);
-    setFormData(prev => ({ ...prev, image: '' }));
+    setFormData((prev) => ({ ...prev, image: '' }));
   };
 
-  // ── Open add/edit modal ────────────────────────────────────────────────────
   const openAddModal = () => {
     setEditingId(null);
     setImageFile(null);
-    setFormData({ ...EMPTY_FORM, displayOrder: cards.length + 1 });
+    const base = cards[0] || {};
+    setFormData({
+      ...EMPTY_FORM,
+      sectionTitle: base.sectionTitle || EMPTY_FORM.sectionTitle,
+      sectionDescription: base.sectionDescription || EMPTY_FORM.sectionDescription,
+      order: cards.length + 1,
+    });
     setIsModalOpen(true);
   };
 
@@ -96,15 +95,12 @@ export default function WhyChooseUsSection() {
     setEditingId(card._id);
     setImageFile(null);
     setFormData({
+      sectionTitle: card.sectionTitle || EMPTY_FORM.sectionTitle,
+      sectionDescription: card.sectionDescription || EMPTY_FORM.sectionDescription,
       title: card.title || '',
-      subtitle: card.subtitle || '',
       description: card.description || '',
       image: card.image || '',
-      stat1Value: card.stat1Value || '',
-      stat1Label: card.stat1Label || '',
-      stat2Value: card.stat2Value || '',
-      stat2Label: card.stat2Label || '',
-      displayOrder: card.displayOrder ?? 1,
+      order: card.order ?? 1,
       isActive: card.isActive !== undefined ? card.isActive : true,
     });
     setIsModalOpen(true);
@@ -117,10 +113,14 @@ export default function WhyChooseUsSection() {
     setFormData(EMPTY_FORM);
   };
 
-  // ── Save card (create or update) ───────────────────────────────────────────
   const saveCard = async () => {
-    if (!formData.title.trim() || !formData.subtitle.trim() || !formData.description.trim()) {
-      toast.error('Title, subtitle and description are required');
+    if (!formData.sectionTitle.trim() || !formData.sectionDescription.trim()) {
+      toast.error('Section title and description are required');
+      return;
+    }
+
+    if (!formData.title.trim() || !formData.description.trim()) {
+      toast.error('Title and description are required');
       return;
     }
 
@@ -128,32 +128,29 @@ export default function WhyChooseUsSection() {
     try {
       let savedCard;
       const payload = {
+        sectionTitle: formData.sectionTitle,
+        sectionDescription: formData.sectionDescription,
         title: formData.title,
-        subtitle: formData.subtitle,
         description: formData.description,
-        stat1Value: formData.stat1Value,
-        stat1Label: formData.stat1Label,
-        stat2Value: formData.stat2Value,
-        stat2Label: formData.stat2Label,
-        displayOrder: Number(formData.displayOrder),
+        image: formData.image || '',
+        order: Number(formData.order),
         isActive: formData.isActive,
       };
 
       if (editingId) {
-        const res = await updateApproachCard(editingId, payload);
+        const res = await updateWhyChoose(editingId, payload);
         savedCard = res.data;
       } else {
-        const res = await createApproachCard(payload);
+        const res = await createWhyChoose(payload);
         savedCard = res.data;
       }
 
-      // Upload image if one was selected
       if (imageFile && savedCard._id) {
         try {
-          const imgRes = await uploadApproachCardImage(savedCard._id, imageFile);
+          const imgRes = await uploadWhyChooseImage(savedCard._id, imageFile);
           savedCard = imgRes.data;
         } catch (imgErr) {
-          toast.error('Card saved but image upload failed: ' + imgErr.message);
+          toast.error('Card saved, but image upload failed: ' + imgErr.message);
         }
       }
 
@@ -168,7 +165,6 @@ export default function WhyChooseUsSection() {
     }
   };
 
-  // ── Delete card ────────────────────────────────────────────────────────────
   const openDeleteModal = (id) => {
     setDeletingId(id);
     setIsDeleteModalOpen(true);
@@ -178,7 +174,7 @@ export default function WhyChooseUsSection() {
     if (!deletingId) return;
     setIsDeleting(true);
     try {
-      await deleteApproachCard(deletingId);
+      await deleteWhyChoose(deletingId);
       toast.success('Card deleted successfully');
       setIsDeleteModalOpen(false);
       setDeletingId(null);
@@ -193,13 +189,12 @@ export default function WhyChooseUsSection() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-      {/* Header / Toggle */}
       <div
         className="flex items-center justify-between p-5 bg-gray-50 border-b border-gray-200 cursor-pointer select-none"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-gray-800">Why Choose Us Section</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Why Choose Section</h2>
           {isLoading ? (
             <span className="bg-gray-100 text-gray-400 text-xs font-bold px-2 py-1 rounded-md animate-pulse">Loading...</span>
           ) : (
@@ -219,13 +214,12 @@ export default function WhyChooseUsSection() {
         </div>
       </div>
 
-      {/* Content */}
       {isExpanded && (
         <div className="p-0 overflow-x-auto">
           {isLoading ? (
             <div className="p-8 flex flex-col gap-4">
-              {[1, 2].map(i => (
-                <div key={i} className="animate-pulse flex items-center gap-4">
+              {[1, 2].map((item) => (
+                <div key={item} className="animate-pulse flex items-center gap-4">
                   <div className="w-10 h-10 bg-gray-200 rounded-lg" />
                   <div className="flex-1 space-y-2">
                     <div className="h-4 bg-gray-200 rounded w-1/3" />
@@ -236,7 +230,7 @@ export default function WhyChooseUsSection() {
             </div>
           ) : cards.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No cards added yet. Click "Add Card" to create one.
+              No cards added yet. Click “Add Card” to create one.
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -244,7 +238,7 @@ export default function WhyChooseUsSection() {
                 <tr className="bg-white border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500">
                   <th className="p-4 font-medium">Image</th>
                   <th className="p-4 font-medium">Title</th>
-                  <th className="p-4 font-medium hidden sm:table-cell">Subtitle</th>
+                  <th className="p-4 font-medium hidden sm:table-cell">Description</th>
                   <th className="p-4 font-medium hidden md:table-cell">Order</th>
                   <th className="p-4 font-medium">Status</th>
                   <th className="p-4 font-medium text-right">Actions</th>
@@ -265,20 +259,18 @@ export default function WhyChooseUsSection() {
                     <td className="p-4">
                       <p className="font-semibold text-gray-800 text-sm">{card.title}</p>
                     </td>
-                    <td className="p-4 hidden sm:table-cell text-sm text-gray-500">{card.subtitle}</td>
-                    <td className="p-4 hidden md:table-cell text-sm text-gray-500">{card.displayOrder}</td>
+                    <td className="p-4 hidden sm:table-cell text-sm text-gray-500">{card.description}</td>
+                    <td className="p-4 hidden md:table-cell text-sm text-gray-500">{card.order}</td>
                     <td className="p-4">
                       <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${card.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                         {card.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="p-4 text-right space-x-2">
-                      <button onClick={() => openEditModal(card)}
-                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                      <button onClick={() => openEditModal(card)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 size={16} />
                       </button>
-                      <button onClick={() => openDeleteModal(card._id)}
-                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                      <button onClick={() => openDeleteModal(card._id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -290,14 +282,11 @@ export default function WhyChooseUsSection() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800">
-                {editingId ? 'Edit Card' : 'Add New Card'}
-              </h3>
+              <h3 className="text-lg font-bold text-gray-800">{editingId ? 'Edit Card' : 'Add New Card'}</h3>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors">
                 <X size={20} />
               </button>
@@ -305,47 +294,29 @@ export default function WhyChooseUsSection() {
 
             <div className="p-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Col */}
                 <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Section Title <span className="text-red-500">*</span></label>
+                    <input type="text" name="sectionTitle" value={formData.sectionTitle} onChange={handleFormChange}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Section Description <span className="text-red-500">*</span></label>
+                    <textarea name="sectionDescription" value={formData.sectionDescription} onChange={handleFormChange} rows={3}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors resize-none" />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
                     <input type="text" name="title" value={formData.title} onChange={handleFormChange}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors"
-                      placeholder="e.g. Expert Team" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Subtitle <span className="text-red-500">*</span></label>
-                    <input type="text" name="subtitle" value={formData.subtitle} onChange={handleFormChange}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors"
-                      placeholder="e.g. Trusted Professionals" />
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
-                    <textarea name="description" value={formData.description} onChange={handleFormChange}
-                      rows={4}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors resize-none"
-                      placeholder="Describe this card..." />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
-                      <input type="number" name="displayOrder" value={formData.displayOrder} onChange={handleFormChange}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                      <div className="mt-2 flex items-center gap-2">
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleFormChange} className="sr-only peer" />
-                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500" />
-                        </label>
-                        <span className="text-sm text-gray-600">{formData.isActive ? 'Active' : 'Inactive'}</span>
-                      </div>
-                    </div>
+                    <textarea name="description" value={formData.description} onChange={handleFormChange} rows={4}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors resize-none" />
                   </div>
                 </div>
 
-                {/* Right Col */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Card Image</label>
@@ -354,10 +325,8 @@ export default function WhyChooseUsSection() {
                         <>
                           <img src={formData.image} alt="Preview" className="w-full h-full object-cover rounded-xl" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <button type="button" onClick={() => fileInputRef.current?.click()}
-                              className="bg-white text-orange-600 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm">Change</button>
-                            <button type="button" onClick={removeImage}
-                              className="bg-white text-red-500 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm flex items-center gap-1">
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white text-orange-600 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm">Change</button>
+                            <button type="button" onClick={removeImage} className="bg-white text-red-500 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm flex items-center gap-1">
                               <X size={12} /> Remove
                             </button>
                           </div>
@@ -372,32 +341,21 @@ export default function WhyChooseUsSection() {
                       )}
                     </div>
                   </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Stat 1 Value</label>
-                      <input type="text" name="stat1Value" value={formData.stat1Value} onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm"
-                        placeholder="e.g. 500+" />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
+                      <input type="number" name="order" value={formData.order} onChange={handleFormChange}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Stat 1 Label</label>
-                      <input type="text" name="stat1Label" value={formData.stat1Label} onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm"
-                        placeholder="e.g. Clients" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Stat 2 Value</label>
-                      <input type="text" name="stat2Value" value={formData.stat2Value} onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm"
-                        placeholder="e.g. 15+" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Stat 2 Label</label>
-                      <input type="text" name="stat2Label" value={formData.stat2Label} onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none text-sm"
-                        placeholder="e.g. Years Exp." />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <div className="mt-2 flex items-center gap-2">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleFormChange} className="sr-only peer" />
+                          <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500" />
+                        </label>
+                        <span className="text-sm text-gray-600">{formData.isActive ? 'Active' : 'Inactive'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -405,12 +363,10 @@ export default function WhyChooseUsSection() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
-              <button onClick={closeModal} disabled={isSaving}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">
+              <button onClick={closeModal} disabled={isSaving} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">
                 Cancel
               </button>
-              <button onClick={saveCard} disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 transition-colors shadow-sm disabled:bg-orange-300">
+              <button onClick={saveCard} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 transition-colors shadow-sm disabled:bg-orange-300">
                 {isSaving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> Save Card</>}
               </button>
             </div>
@@ -418,7 +374,6 @@ export default function WhyChooseUsSection() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center">
@@ -428,14 +383,10 @@ export default function WhyChooseUsSection() {
             <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Card?</h3>
             <p className="text-sm text-gray-500 mb-6">This action cannot be undone.</p>
             <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => { setIsDeleteModalOpen(false); setDeletingId(null); }}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">
+              <button onClick={() => { setIsDeleteModalOpen(false); setDeletingId(null); }} disabled={isDeleting} className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">
                 Cancel
               </button>
-              <button onClick={confirmDelete} disabled={isDeleting}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 border border-transparent rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:bg-red-300">
+              <button onClick={confirmDelete} disabled={isDeleting} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 border border-transparent rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:bg-red-300">
                 {isDeleting ? <><Loader2 size={14} className="animate-spin" /> Deleting...</> : 'Yes, Delete'}
               </button>
             </div>

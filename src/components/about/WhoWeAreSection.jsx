@@ -4,10 +4,13 @@ import toast from 'react-hot-toast';
 import { getWhoWeAre, saveWhoWeAre, uploadWhoWeAreImage } from '../../services/api';
 
 const EMPTY_FORM = {
+  _id: null,
   title: '',
-  paragraph1: '',
+  description1: '',
+  description2: '',
+  description3: '',
   image: '',
-  experienceValue: '',
+  experienceYears: '',
   experienceLabel: '',
   isActive: true,
 };
@@ -71,28 +74,90 @@ export default function WhoWeAreSection() {
       toast.error('Title is required');
       return;
     }
+
+    if (!data._id && !imageFile) {
+      toast.error('Image is required when creating Who We Are content');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      let currentImage = data.image;
-      if (imageFile) {
-        const uploadRes = await uploadWhoWeAreImage(imageFile);
-        if (uploadRes.success) {
-          currentImage = uploadRes.data.image;
+      if (!data._id) {
+        const formData = new FormData();
+        formData.append('title', data.title.trim());
+        formData.append('description1', data.description1 || '');
+        formData.append('description2', data.description2 || '');
+        formData.append('description3', data.description3 || '');
+        formData.append('experienceYears', data.experienceYears || '');
+        formData.append('experienceLabel', data.experienceLabel || '');
+        formData.append('isActive', data.isActive === false ? 'false' : 'true');
+        if (imageFile) {
+          formData.append('image', imageFile);
+        }
+
+        const res = await saveWhoWeAre(formData);
+        if (res && res.data) {
+          setData({
+            _id: res.data._id || null,
+            title: res.data.title || '',
+            description1: res.data.description1 || '',
+            description2: res.data.description2 || '',
+            description3: res.data.description3 || '',
+            image: res.data.image || '',
+            experienceYears: res.data.experienceYears || '',
+            experienceLabel: res.data.experienceLabel || '',
+            isActive: res.data.isActive ?? true,
+          });
           setImageFile(null);
+          toast.success('Who We Are section created successfully!');
+          await loadData();
+        }
+      } else {
+        const payload = {
+          title: data.title.trim(),
+          description1: data.description1 || '',
+          description2: data.description2 || '',
+          description3: data.description3 || '',
+          experienceYears: data.experienceYears || '',
+          experienceLabel: data.experienceLabel || '',
+          isActive: data.isActive ?? true,
+        };
+
+        const res = await saveWhoWeAre({ ...payload, _id: data._id });
+        if (res && res.data) {
+          let finalData = { ...res.data };
+
+          if (imageFile) {
+            try {
+              const uploadRes = await uploadWhoWeAreImage(imageFile, res.data._id);
+              if (uploadRes && uploadRes.data) {
+                finalData.image = uploadRes.data.image || uploadRes.data.url || res.data.image;
+                setImageFile(null);
+              }
+            } catch (uploadErr) {
+              console.error('Image upload error:', uploadErr);
+              toast.error('Content updated but image upload failed');
+            }
+          }
+
+          setData({
+            _id: finalData._id || null,
+            title: finalData.title || '',
+            description1: finalData.description1 || '',
+            description2: finalData.description2 || '',
+            description3: finalData.description3 || '',
+            image: finalData.image || '',
+            experienceYears: finalData.experienceYears || '',
+            experienceLabel: finalData.experienceLabel || '',
+            isActive: finalData.isActive ?? true,
+          });
+          toast.success('Who We Are section updated successfully!');
+          await loadData();
         }
       }
-      
-      const res = await saveWhoWeAre({
-        ...data,
-        image: currentImage
-      });
-      
-      if (res && res.data) {
-        setData({ ...EMPTY_FORM, ...res.data });
-      }
-      toast.success('Who We Are section saved successfully!');
     } catch (error) {
-      toast.error(error.message || 'Failed to save Who We Are section');
+      console.error('Save error:', error);
+      toast.error(error.response?.data?.message || error.message || 'Failed to save Who We Are section');
     } finally {
       setIsSaving(false);
     }
@@ -127,18 +192,28 @@ export default function WhoWeAreSection() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Section Title <span className="text-red-500">*</span></label>
-                    <input type="text" name="title" value={data.title} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. Empowering Growth" />
+                    <input type="text" name="title" value={data.title} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. Who We Are" />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Paragraph 1</label>
-                    <textarea name="paragraph1" value={data.paragraph1} onChange={handleChange} rows={5} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none" placeholder="Enter first paragraph..." />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description 1</label>
+                    <textarea name="description1" value={data.description1} onChange={handleChange} rows={4} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none" placeholder="Enter first description..." />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description 2</label>
+                    <textarea name="description2" value={data.description2} onChange={handleChange} rows={3} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none" placeholder="Enter second description (optional)..." />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description 3</label>
+                    <textarea name="description3" value={data.description3} onChange={handleChange} rows={3} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none" placeholder="Enter third description (optional)..." />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Experience Value</label>
-                      <input type="text" name="experienceValue" value={data.experienceValue} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. 15+" />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Experience Years</label>
+                      <input type="text" name="experienceYears" value={data.experienceYears} onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors" placeholder="e.g. 15+" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Experience Label</label>

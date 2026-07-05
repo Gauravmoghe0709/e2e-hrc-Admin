@@ -4,6 +4,10 @@ import toast, { Toaster } from 'react-hot-toast';
 import HeroSection from '../components/home/HeroSection';
 import ServicesSection from '../components/home/ServicesSection';
 import WhyChooseUsSection from '../components/home/WhyChooseUsSection';
+import EmployerSection from '../components/home/EmployerSection';
+import EmployeeCardsSection from '../components/home/EmployeeCardsSection';
+import HowWeWorkSection from '../components/home/HowWeWorkSection';
+import LocationCardsSection from '../components/home/LocationCardsSection';
 import ContactCTASection from '../components/home/ContactCTASection';
 import { getHeroData, updateHeroData, uploadHeroImage } from '../services/api';
 
@@ -103,11 +107,23 @@ export default function HomeManagement() {
           isLoading={isHeroLoading}
         />
 
+          {/* Employer Section — fully self-contained, backed by employer section API */}
+        <EmployerSection />
+
+
+        {/* How We Work — fully self-contained, backed by How We Work API */}
+        <HowWeWorkSection />
+
+        {/* Location Cards — fully self-contained, backed by location cards API */}
+        <LocationCardsSection />
+
         {/* Services — fully self-contained, loads & saves its own data */}
         <ServicesSection />
 
         {/* Why Choose Us — fully self-contained, backed by ApproachCards API */}
         <WhyChooseUsSection />
+
+      
 
         {/* Contact CTA — fully self-contained, has its own save button */}
         <ContactCTASection />

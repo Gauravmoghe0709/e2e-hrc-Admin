@@ -152,6 +152,61 @@ export const uploadApproachCardImage = async (id, imageFile) => {
 };
 
 // ════════════════════════════════════════════════════════════════════════════
+// EMPLOYER SECTION
+// ════════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/employeecard — all cards for admin
+export const getAllEmployerSectionCards = async () => {
+  const response = await fetch('/api/admin/employeecard', {
+    credentials: 'include',
+  });
+  return handleResponse(response);
+};
+
+// POST /api/admin/employeecard — create a new card
+export const createEmployerSectionCard = async (cardData) => {
+  const response = await fetch('/api/admin/employeecard', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cardData),
+  });
+  return handleResponse(response);
+};
+
+// PUT /api/admin/employeecard/:id — update a card
+export const updateEmployerSectionCard = async (id, cardData) => {
+  const response = await fetch(`/api/admin/employeecard/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cardData),
+  });
+  return handleResponse(response);
+};
+
+// DELETE /api/admin/employeecard/:id — delete a card
+export const deleteEmployerSectionCard = async (id) => {
+  const response = await fetch(`/api/admin/employeecard/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  return handleResponse(response);
+};
+
+// POST /api/admin/employeecard/:id/image — upload employee card image
+export const uploadEmployerSectionCardImage = async (id, imageFile) => {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  const response = await fetch(`/api/admin/employeecard/${id}/image`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+// ════════════════════════════════════════════════════════════════════════════
 // CONTACT CTA SECTION
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -184,21 +239,46 @@ export const getAboutHero = async () => {
   return handleResponse(response);
 };
 
-export const saveAboutHero = async (data) => {
-  const response = await fetch('/api/admin/about/hero', {
-    method: 'PUT',
+export const saveAboutHero = async (data, imageFile = null) => {
+  if (data && data._id) {
+    const response = await fetch(`/api/hero/${data._id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  }
+
+  const formData = new FormData();
+  formData.append('subtitle', data.subtitle || '');
+  formData.append('mainTitle', data.mainTitle || '');
+  formData.append('description', data.description || '');
+  formData.append('isActive', data.isActive ?? true);
+  formData.append('button1Text', data.button1Text || '');
+  formData.append('button1Link', data.button1Link || '');
+  formData.append('button2Text', data.button2Text || '');
+  formData.append('button2Link', data.button2Link || '');
+
+  if (imageFile instanceof File) {
+    formData.append('heroImage', imageFile);
+  }
+
+  const response = await fetch('/api/hero', {
+    method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: formData,
   });
   return handleResponse(response);
 };
 
-export const uploadAboutHeroImage = async (imageFile) => {
+export const uploadAboutHeroImage = async (imageFile, id = null) => {
   const formData = new FormData();
-  formData.append('image', imageFile);
-  const response = await fetch('/api/admin/about/hero/image', {
-    method: 'POST',
+  // backend expects file field named 'heroImage' when creating/updating via hero routes
+  formData.append('heroImage', imageFile);
+  const url = id ? `/api/hero/${id}/image` : `/api/hero`;
+  const response = await fetch(url, {
+    method: id ? 'POST' : 'POST',
     credentials: 'include',
     body: formData,
   });
@@ -207,25 +287,38 @@ export const uploadAboutHeroImage = async (imageFile) => {
 
 // ── WHO WE ARE ──
 export const getWhoWeAre = async () => {
-  const response = await fetch('/api/about/whoweare');
+  const response = await fetch('/api/about/who-we-are');
   if (response.status === 404) return null;
   return handleResponse(response);
 };
 
 export const saveWhoWeAre = async (data) => {
-  const response = await fetch('/api/admin/about/whoweare', {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return handleResponse(response);
-};
+  if (data && data._id) {
+    const response = await fetch(`/api/admin/about/who-we-are/${data._id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  }
 
-export const uploadWhoWeAreImage = async (imageFile) => {
-  const formData = new FormData();
-  formData.append('image', imageFile);
-  const response = await fetch('/api/admin/about/whoweare/image', {
+  const formData = data instanceof FormData ? data : new FormData();
+
+  if (!(data instanceof FormData)) {
+    formData.append('title', data.title || '');
+    formData.append('description1', data.description1 || '');
+    formData.append('description2', data.description2 || '');
+    formData.append('description3', data.description3 || '');
+    formData.append('experienceYears', data.experienceYears || '');
+    formData.append('experienceLabel', data.experienceLabel || '');
+    formData.append('isActive', data.isActive === false ? 'false' : 'true');
+    if (data.image instanceof File) {
+      formData.append('image', data.image);
+    }
+  }
+
+  const response = await fetch('/api/admin/about/who-we-are', {
     method: 'POST',
     credentials: 'include',
     body: formData,
@@ -233,15 +326,36 @@ export const uploadWhoWeAreImage = async (imageFile) => {
   return handleResponse(response);
 };
 
-// ── BRIDGING THE GAP ──
+export const uploadWhoWeAreImage = async (imageFile, id = null) => {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  const url = id ? `/api/admin/about/who-we-are/${id}/image` : `/api/admin/about/who-we-are`;
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+// ── BRIDGING THE GAP ── 
 export const getBridgingTheGap = async () => {
   const response = await fetch('/api/about/bridging');
   if (response.status === 404) return null;
   return handleResponse(response);
 };
 
-export const saveBridgingTheGap = async (data) => {
+export const createBridgingTheGap = async (formData) => {
   const response = await fetch('/api/admin/about/bridging', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+export const updateBridgingTheGap = async (id, data) => {
+  const response = await fetch(`/api/admin/about/bridging/${id}`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -250,10 +364,26 @@ export const saveBridgingTheGap = async (data) => {
   return handleResponse(response);
 };
 
-export const uploadBridgingTheGapImage = async (imageFile) => {
-  const formData = new FormData();
-  formData.append('image', imageFile);
-  const response = await fetch('/api/admin/about/bridging/image', {
+export const saveBridgingTheGap = async (data) => {
+  if (data && data._id) {
+    return updateBridgingTheGap(data._id, data);
+  }
+
+  const formData = data instanceof FormData ? data : new FormData();
+
+  if (!(data instanceof FormData)) {
+    formData.append('heading', data.heading || '');
+    formData.append('description', data.description || '');
+    formData.append('feature1', data.feature1 || '');
+    formData.append('feature2', data.feature2 || '');
+    formData.append('feature3', data.feature3 || '');
+    formData.append('isActive', data.isActive === false ? 'false' : 'true');
+    if (data.image instanceof File) {
+      formData.append('image', data.image);
+    }
+  }
+
+  const response = await fetch('/api/admin/about/bridging', {
     method: 'POST',
     credentials: 'include',
     body: formData,
@@ -261,50 +391,18 @@ export const uploadBridgingTheGapImage = async (imageFile) => {
   return handleResponse(response);
 };
 
-// ── TEAM MEMBERS ──
-export const getTeamMembers = async () => {
-  const response = await fetch('/api/admin/about/team', { credentials: 'include' });
-  return handleResponse(response);
-};
-
-export const createTeamMember = async (data) => {
-  const response = await fetch('/api/admin/about/team', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return handleResponse(response);
-};
-
-export const updateTeamMember = async (id, data) => {
-  const response = await fetch(`/api/admin/about/team/${id}`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return handleResponse(response);
-};
-
-export const deleteTeamMember = async (id) => {
-  const response = await fetch(`/api/admin/about/team/${id}`, {
-    method: 'DELETE',
-    credentials: 'include',
-  });
-  return handleResponse(response);
-};
-
-export const uploadTeamMemberImage = async (id, imageFile) => {
+export const uploadBridgingTheGapImage = async (imageFile, id = null) => {
   const formData = new FormData();
   formData.append('image', imageFile);
-  const response = await fetch(`/api/admin/about/team/${id}/image`, {
+  const url = id ? `/api/admin/about/bridging/${id}/image` : `/api/admin/about/bridging`;
+  const response = await fetch(url, {
     method: 'POST',
     credentials: 'include',
     body: formData,
   });
   return handleResponse(response);
 };
+
 
 // ── ABOUT TESTIMONIALS ──
 export const getAboutTestimonials = async () => {
@@ -336,17 +434,6 @@ export const deleteAboutTestimonial = async (id) => {
   const response = await fetch(`/api/admin/about/testimonials/${id}`, {
     method: 'DELETE',
     credentials: 'include',
-  });
-  return handleResponse(response);
-};
-
-export const uploadAboutTestimonialImage = async (id, imageFile) => {
-  const formData = new FormData();
-  formData.append('image', imageFile);
-  const response = await fetch(`/api/admin/about/testimonials/${id}/image`, {
-    method: 'POST',
-    credentials: 'include',
-    body: formData,
   });
   return handleResponse(response);
 };
