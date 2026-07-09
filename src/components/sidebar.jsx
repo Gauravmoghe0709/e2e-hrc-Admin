@@ -11,6 +11,8 @@ import {
   ChevronDown,
   Circle,
   Users,
+  LayoutPanelTop,
+  BriefcaseBusiness,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -18,6 +20,7 @@ const sidebarItems = [
   { title: "Home", icon: Home, path: "/admin/home" },
   { title: "About Us", icon: Info, path: "/admin/about-us" },
   { title: "Employer", icon: Building2, path: "/admin/employer" },
+  { title: "Workforce Solution", icon: BriefcaseBusiness, path: "/admin/workforce-solution" },
   { title: "Employee", icon: Users, path: "/admin/employee" },
   {
     title: "Blogs",
@@ -37,6 +40,7 @@ const sidebarItems = [
       { title: "Contact Enquiries", path: "/admin/contact/enquiries" },
     ],
   },
+  { title: "Footer", icon: LayoutPanelTop, path: "/admin/footer" },
 ];
 
 export default function Sidebar({ isOpen, setIsOpen }) {
@@ -161,17 +165,15 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                     {/* Expand chevron */}
                     <ChevronDown
                       size={14}
-                      className={`flex-shrink-0 transition-transform duration-200 ${
-                        isExpanded ? "rotate-180 text-orange-400" : "text-gray-400"
-                      }`}
+                      className={`flex-shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-180 text-orange-400" : "text-gray-400"
+                        }`}
                     />
                   </button>
 
                   {/* Children */}
                   <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      isExpanded ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
-                    }`}
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
+                      }`}
                   >
                     <div className="ml-4 pl-4 border-l-2 border-orange-100 mb-1 space-y-0.5">
                       {item.children.map((child) => {
