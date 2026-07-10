@@ -5,21 +5,21 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
-  getAdminWhyChoose,
-  createWhyChoose,
-  updateWhyChoose,
-  deleteWhyChoose,
-  uploadWhyChooseImage,
-} from '../../services/whyChooseService';
+  getAdminApproachCards,
+  createApproachCard,
+  updateApproachCard,
+  deleteApproachCard,
+  uploadApproachCardImage
+} from '../../services/home/approachCardService.js';
 
 const EMPTY_FORM = {
-  sectionTitle: 'Why Choose E2E HRC?',
-  sectionDescription: 'Delivering excellence through dedicated service and unparalleled market knowledge.',
   title: '',
   description: '',
-  icon: '',
-  image: '',
-  order: 1,
+  stat1Value: '',
+  stat1Label: '',
+  stat2Value: '',
+  stat2Label: '',
+  displayOrder: 1,
   isActive: true,
 };
 
@@ -33,6 +33,7 @@ export default function WhyChooseUsSection() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [imageFile, setImageFile] = useState(null);
+  const [previewImage, setPreviewImage] = useState('');
   const fileInputRef = useRef(null);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -46,11 +47,11 @@ export default function WhyChooseUsSection() {
   const loadCards = async () => {
     setIsLoading(true);
     try {
-      const res = await getAdminWhyChoose();
+      const res = await getAdminApproachCards();
       setCards(res.data || []);
     } catch (error) {
-      console.error('Failed to load why choose cards:', error);
-      toast.error('Failed to load Why Choose cards');
+      console.error('Failed to load approach cards:', error);
+      toast.error('Failed to load Why Choose Us cards');
     } finally {
       setIsLoading(false);
     }
@@ -68,25 +69,30 @@ export default function WhyChooseUsSection() {
       toast.error('Image must be less than 5MB');
       return;
     }
+
+    // Validate image type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload a valid image file');
+      return;
+    }
+
     setImageFile(file);
-    setFormData((prev) => ({ ...prev, image: URL.createObjectURL(file) }));
+    setPreviewImage(URL.createObjectURL(file));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const removeImage = () => {
     setImageFile(null);
-    setFormData((prev) => ({ ...prev, image: '' }));
+    setPreviewImage('');
   };
 
   const openAddModal = () => {
     setEditingId(null);
     setImageFile(null);
-    const base = cards[0] || {};
+    setPreviewImage('');
     setFormData({
       ...EMPTY_FORM,
-      sectionTitle: base.sectionTitle || EMPTY_FORM.sectionTitle,
-      sectionDescription: base.sectionDescription || EMPTY_FORM.sectionDescription,
-      order: cards.length + 1,
+      displayOrder: cards.length + 1,
     });
     setIsModalOpen(true);
   };
@@ -94,13 +100,15 @@ export default function WhyChooseUsSection() {
   const openEditModal = (card) => {
     setEditingId(card._id);
     setImageFile(null);
+    setPreviewImage(card.image || '');
     setFormData({
-      sectionTitle: card.sectionTitle || EMPTY_FORM.sectionTitle,
-      sectionDescription: card.sectionDescription || EMPTY_FORM.sectionDescription,
       title: card.title || '',
       description: card.description || '',
-      image: card.image || '',
-      order: card.order ?? 1,
+      stat1Value: card.stat1Value || '',
+      stat1Label: card.stat1Label || '',
+      stat2Value: card.stat2Value || '',
+      stat2Label: card.stat2Label || '',
+      displayOrder: card.displayOrder ?? 1,
       isActive: card.isActive !== undefined ? card.isActive : true,
     });
     setIsModalOpen(true);
@@ -110,51 +118,46 @@ export default function WhyChooseUsSection() {
     setIsModalOpen(false);
     setEditingId(null);
     setImageFile(null);
+    setPreviewImage('');
     setFormData(EMPTY_FORM);
   };
 
   const saveCard = async () => {
-    if (!formData.sectionTitle.trim() || !formData.sectionDescription.trim()) {
-      toast.error('Section title and description are required');
+    if (!formData.title.trim()) {
+      toast.error('Title is required');
       return;
     }
-
-    if (!formData.title.trim() || !formData.description.trim()) {
-      toast.error('Title and description are required');
+    if (!formData.description.trim()) {
+      toast.error('Description is required');
       return;
     }
 
     setIsSaving(true);
     try {
-      let savedCard;
-      const payload = {
-        sectionTitle: formData.sectionTitle,
-        sectionDescription: formData.sectionDescription,
-        title: formData.title,
-        description: formData.description,
-        image: formData.image || '',
-        order: Number(formData.order),
-        isActive: formData.isActive,
-      };
+      const payloadData = new FormData();
+      payloadData.append('title', formData.title);
+      payloadData.append('description', formData.description);
+      if (formData.stat1Value) payloadData.append('stat1Value', formData.stat1Value);
+      if (formData.stat1Label) payloadData.append('stat1Label', formData.stat1Label);
+      if (formData.stat2Value) payloadData.append('stat2Value', formData.stat2Value);
+      if (formData.stat2Label) payloadData.append('stat2Label', formData.stat2Label);
+      payloadData.append('displayOrder', formData.displayOrder);
+      payloadData.append('isActive', formData.isActive);
+
+      if (imageFile) {
+        payloadData.append('image', imageFile);
+      }
 
       if (editingId) {
-        const res = await updateWhyChoose(editingId, payload);
-        savedCard = res.data;
+        // Only if we want to replace the image separately, but we can do it in PUT as well.
+        // The API supports upload.single('image') on PUT /admin/approach-cards/:id
+        await updateApproachCard(editingId, payloadData);
+        toast.success('Card updated successfully!');
       } else {
-        const res = await createWhyChoose(payload);
-        savedCard = res.data;
+        await createApproachCard(payloadData);
+        toast.success('Card created successfully!');
       }
 
-      if (imageFile && savedCard._id) {
-        try {
-          const imgRes = await uploadWhyChooseImage(savedCard._id, imageFile);
-          savedCard = imgRes.data;
-        } catch (imgErr) {
-          toast.error('Card saved, but image upload failed: ' + imgErr.message);
-        }
-      }
-
-      toast.success(editingId ? 'Card updated successfully!' : 'Card created successfully!');
       closeModal();
       await loadCards();
     } catch (error) {
@@ -163,6 +166,33 @@ export default function WhyChooseUsSection() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const uploadImageIndependently = async (id, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      await uploadApproachCardImage(id, formData);
+      toast.success('Image replaced successfully!');
+      await loadCards();
+    } catch (error) {
+      toast.error('Failed to replace image: ' + error.message);
+    }
+  };
+
+  const handleIndependentImageChange = (e, id) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload a valid image file');
+      return;
+    }
+    uploadImageIndependently(id, file);
+    e.target.value = '';
   };
 
   const openDeleteModal = (id) => {
@@ -174,7 +204,7 @@ export default function WhyChooseUsSection() {
     if (!deletingId) return;
     setIsDeleting(true);
     try {
-      await deleteWhyChoose(deletingId);
+      await deleteApproachCard(deletingId);
       toast.success('Card deleted successfully');
       setIsDeleteModalOpen(false);
       setDeletingId(null);
@@ -194,7 +224,7 @@ export default function WhyChooseUsSection() {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-gray-800">Why Choose Section</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Why Choose Us Section</h2>
           {isLoading ? (
             <span className="bg-gray-100 text-gray-400 text-xs font-bold px-2 py-1 rounded-md animate-pulse">Loading...</span>
           ) : (
@@ -230,7 +260,7 @@ export default function WhyChooseUsSection() {
             </div>
           ) : cards.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No cards added yet. Click “Add Card” to create one.
+              No cards added yet. Click "Add Card" to create one.
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -238,7 +268,9 @@ export default function WhyChooseUsSection() {
                 <tr className="bg-white border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500">
                   <th className="p-4 font-medium">Image</th>
                   <th className="p-4 font-medium">Title</th>
-                  <th className="p-4 font-medium hidden sm:table-cell">Description</th>
+                  <th className="p-4 font-medium hidden sm:table-cell">Subtitle</th>
+                  <th className="p-4 font-medium hidden lg:table-cell">Description</th>
+                  <th className="p-4 font-medium hidden md:table-cell">Stats</th>
                   <th className="p-4 font-medium hidden md:table-cell">Order</th>
                   <th className="p-4 font-medium">Status</th>
                   <th className="p-4 font-medium text-right">Actions</th>
@@ -249,9 +281,9 @@ export default function WhyChooseUsSection() {
                   <tr key={card._id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4">
                       {card.image ? (
-                        <img src={card.image} alt={card.title} className="w-10 h-10 rounded-lg object-cover border border-gray-200" />
+                        <img src={card.image} alt={card.title} className="w-12 h-12 rounded-lg object-cover border border-gray-200" />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
                           <ImageIcon size={16} />
                         </div>
                       )}
@@ -259,14 +291,22 @@ export default function WhyChooseUsSection() {
                     <td className="p-4">
                       <p className="font-semibold text-gray-800 text-sm">{card.title}</p>
                     </td>
-                    <td className="p-4 hidden sm:table-cell text-sm text-gray-500">{card.description}</td>
-                    <td className="p-4 hidden md:table-cell text-sm text-gray-500">{card.order}</td>
+                    <td className="p-4 hidden lg:table-cell text-sm text-gray-500 max-w-[200px] truncate">{card.description}</td>
+                    <td className="p-4 hidden md:table-cell text-xs text-gray-500">
+                      {card.stat1Value && <div>{card.stat1Value} {card.stat1Label}</div>}
+                      {card.stat2Value && <div>{card.stat2Value} {card.stat2Label}</div>}
+                    </td>
+                    <td className="p-4 hidden md:table-cell text-sm text-gray-500">{card.displayOrder}</td>
                     <td className="p-4">
                       <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${card.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                         {card.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="p-4 text-right space-x-2">
+                    <td className="p-4 text-right space-x-2 whitespace-nowrap">
+                      <label className="p-1.5 text-gray-500 hover:bg-gray-200 rounded-md transition-colors cursor-pointer inline-flex items-center" title="Replace Image">
+                        <ImageIcon size={16} />
+                        <input type="file" className="hidden" accept="image/png,image/jpeg,image/webp" onChange={(e) => handleIndependentImageChange(e, card._id)} />
+                      </label>
                       <button onClick={() => openEditModal(card)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
                         <Edit2 size={16} />
                       </button>
@@ -296,24 +336,38 @@ export default function WhyChooseUsSection() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Section Title <span className="text-red-500">*</span></label>
-                    <input type="text" name="sectionTitle" value={formData.sectionTitle} onChange={handleFormChange}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Section Description <span className="text-red-500">*</span></label>
-                    <textarea name="sectionDescription" value={formData.sectionDescription} onChange={handleFormChange} rows={3}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors resize-none" />
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
                     <input type="text" name="title" value={formData.title} onChange={handleFormChange}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
-                    <textarea name="description" value={formData.description} onChange={handleFormChange} rows={4}
+                    <textarea name="description" value={formData.description} onChange={handleFormChange} rows={3}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors resize-none" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Stat 1 Value</label>
+                      <input type="text" name="stat1Value" placeholder="e.g. 500+" value={formData.stat1Value} onChange={handleFormChange}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Stat 1 Label</label>
+                      <input type="text" name="stat1Label" placeholder="e.g. Active Clients" value={formData.stat1Label} onChange={handleFormChange}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Stat 2 Value</label>
+                      <input type="text" name="stat2Value" placeholder="e.g. 98%" value={formData.stat2Value} onChange={handleFormChange}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Stat 2 Label</label>
+                      <input type="text" name="stat2Label" placeholder="e.g. Satisfaction Rate" value={formData.stat2Label} onChange={handleFormChange}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                    </div>
                   </div>
                 </div>
 
@@ -321,9 +375,9 @@ export default function WhyChooseUsSection() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Card Image</label>
                     <div className="mt-1 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center relative overflow-hidden group h-40">
-                      {formData.image ? (
+                      {previewImage ? (
                         <>
-                          <img src={formData.image} alt="Preview" className="w-full h-full object-cover rounded-xl" />
+                          <img src={previewImage} alt="Preview" className="w-full h-full object-cover rounded-xl" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                             <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white text-orange-600 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm">Change</button>
                             <button type="button" onClick={removeImage} className="bg-white text-red-500 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm flex items-center gap-1">
@@ -343,8 +397,8 @@ export default function WhyChooseUsSection() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
-                      <input type="number" name="order" value={formData.order} onChange={handleFormChange}
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Display Order</label>
+                      <input type="number" name="displayOrder" value={formData.displayOrder} onChange={handleFormChange}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
                     </div>
                     <div>
@@ -367,7 +421,7 @@ export default function WhyChooseUsSection() {
                 Cancel
               </button>
               <button onClick={saveCard} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 transition-colors shadow-sm disabled:bg-orange-300">
-                {isSaving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> Save Card</>}
+                {isSaving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> {editingId ? 'Update Card' : 'Create Card'}</>}
               </button>
             </div>
           </div>

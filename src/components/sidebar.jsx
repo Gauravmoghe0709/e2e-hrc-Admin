@@ -41,6 +41,7 @@ const sidebarItems = [
     ],
   },
   { title: "Footer", icon: LayoutPanelTop, path: "/admin/footer" },
+  { title: "SEO Management", icon: LayoutPanelTop, path: "/admin/seo" },
 ];
 
 export default function Sidebar({ isOpen, setIsOpen }) {
