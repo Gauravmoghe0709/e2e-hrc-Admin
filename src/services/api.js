@@ -437,3 +437,216 @@ export const deleteAboutTestimonial = async (id) => {
   });
   return handleResponse(response);
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// HOME PAGE SECTIONS (independent from About page)
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── HOME WHO WE ARE ──
+export const getHomeWhoWeAre = async () => {
+  const response = await fetch('/api/home/who-we-are');
+  if (response.status === 404) return null;
+  return handleResponse(response);
+};
+
+export const saveHomeWhoWeAre = async (data) => {
+  if (data && data._id) {
+    const response = await fetch(`/api/admin/home/who-we-are/${data._id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  }
+
+  const formData = new FormData();
+  formData.append('title', data.title || '');
+  formData.append('description1', data.description1 || '');
+  formData.append('description2', data.description2 || '');
+  formData.append('description3', data.description3 || '');
+  formData.append('experienceYears', data.experienceYears || '');
+  formData.append('experienceLabel', data.experienceLabel || '');
+  formData.append('isActive', data.isActive === false ? 'false' : 'true');
+  if (data.image instanceof File) {
+    formData.append('image', data.image);
+  }
+
+  const response = await fetch('/api/admin/home/who-we-are', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+export const uploadHomeWhoWeAreImage = async (imageFile, id = null) => {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+  const url = id ? `/api/admin/home/who-we-are/${id}/image` : `/api/admin/home/who-we-are`;
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+export const deleteHomeWhoWeAre = async (id) => {
+  const response = await fetch(`/api/admin/home/who-we-are/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  return handleResponse(response);
+};
+
+// ── HOME MISSION & VISION ──
+export const getHomeMissionVision = async () => {
+  const response = await fetch('/api/home/mission-vision');
+  if (response.status === 404) return null;
+  return handleResponse(response);
+};
+
+export const saveHomeMissionVision = async (data) => {
+  if (data && data._id) {
+    const response = await fetch(`/api/admin/home/mission-vision/${data._id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  }
+
+  const formData = new FormData();
+  formData.append('missionTitle', data.missionTitle || 'Our Mission');
+  formData.append('missionDescription', data.missionDescription || '');
+  formData.append('visionTitle', data.visionTitle || 'Our Vision');
+  formData.append('visionDescription', data.visionDescription || '');
+  formData.append('isActive', data.isActive === false ? 'false' : 'true');
+  if (data.visionImage instanceof File) {
+    formData.append('visionImage', data.visionImage);
+  }
+
+  const response = await fetch('/api/admin/home/mission-vision', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+export const uploadHomeMissionVisionImage = async (imageFile, id = null) => {
+  const formData = new FormData();
+  formData.append('visionImage', imageFile);
+  const url = id ? `/api/admin/home/mission-vision/${id}/image` : `/api/admin/home/mission-vision`;
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+export const deleteHomeMissionVision = async (id) => {
+  const response = await fetch(`/api/admin/home/mission-vision/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  return handleResponse(response);
+};
+
+// ── HOME TESTIMONIALS ──
+export const getHomeTestimonials = async () => {
+  const response = await fetch('/api/home/testimonials');
+  if (response.status === 404) return null;
+  return handleResponse(response);
+};
+
+export const getHomeTestimonialsAll = async () => {
+  const response = await fetch('/api/admin/home/testimonials', { credentials: 'include' });
+  return handleResponse(response);
+};
+
+export const saveHomeTestimonials = async (data) => {
+  if (data && data._id) {
+    const response = await fetch(`/api/admin/home/testimonials/${data._id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  }
+
+  const response = await fetch('/api/admin/home/testimonials', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(response);
+};
+
+export const deleteHomeTestimonials = async (id) => {
+  const response = await fetch(`/api/admin/home/testimonials/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  return handleResponse(response);
+};
+
+// ── HOME GLOBAL PRESENCE ──
+export const getHomeGlobalPresence = async () => {
+  const response = await fetch('/api/home/global-presence');
+  if (response.status === 404) return null;
+  return handleResponse(response);
+};
+
+export const saveHomeGlobalPresence = async (data) => {
+  if (data && data._id) {
+    const response = await fetch(`/api/admin/home/global-presence/${data._id}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  }
+
+  const formData = new FormData();
+  formData.append('title', data.title || 'Our Global Footprint');
+  formData.append('description', data.description || '');
+  formData.append('locations', JSON.stringify(data.locations || []));
+  formData.append('isActive', data.isActive === false ? 'false' : 'true');
+  if (data.mapImage instanceof File) {
+    formData.append('mapImage', data.mapImage);
+  }
+
+  const response = await fetch('/api/admin/home/global-presence', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+export const uploadHomeGlobalPresenceMap = async (imageFile, id = null) => {
+  const formData = new FormData();
+  formData.append('mapImage', imageFile);
+  const url = id ? `/api/admin/home/global-presence/${id}/image` : `/api/admin/home/global-presence`;
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return handleResponse(response);
+};
+
+export const deleteHomeGlobalPresence = async (id) => {
+  const response = await fetch(`/api/admin/home/global-presence/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  return handleResponse(response);
+};
