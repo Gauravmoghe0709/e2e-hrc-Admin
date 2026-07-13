@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import AboutHeroSection from '../components/about/AboutHeroSection';
 import WhoWeAreSection from '../components/about/WhoWeAreSection';
 import BridgingTheGapSection from '../components/about/BridgingTheGapSection';
-import WhyChooseUsSection from '../components/home/WhyChooseUsSection';
+import WhyChooseE2ESection from '../components/about/WhyChooseE2ESection';
 import MissionVisionSection from '../components/about/MissionVisionSection';
 import TestimonialsSection from '../components/about/TestimonialsSection';
 
@@ -26,7 +26,7 @@ export default function AboutUsManagement() {
         <AboutHeroSection />
         <WhoWeAreSection />
         <BridgingTheGapSection />
-        <WhyChooseUsSection />
+        <WhyChooseE2ESection />
         <MissionVisionSection />
         <TestimonialsSection />
       </div>

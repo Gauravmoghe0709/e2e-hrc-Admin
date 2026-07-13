@@ -3,6 +3,8 @@ import WorkforceSolutionHero from '../components/WorkforceSolutionManagement/Wor
 import OurWorkforceSolutions from '../components/WorkforceSolutionManagement/OurWorkforceSolutions';
 import HowWeWorkSectionManager from '../components/WorkforceSolutionManagement/HowWeWorkSectionManager';
 import HowWeWorkStepsManager from '../components/WorkforceSolutionManagement/HowWeWorkStepsManager';
+import WorkforceSolutionFAQManager from '../components/WorkforceSolutionManagement/WorkforceSolutionFAQManager';
+import WorkforceSolutionCTAManager from '../components/WorkforceSolutionManagement/WorkforceSolutionCTAManager';
 import TestimonialSectionManager from '../components/WorkforceSolutionManagement/TestimonialSectionManager';
 import TestimonialCardsManager from '../components/WorkforceSolutionManagement/TestimonialCardsManager';
 
@@ -30,6 +32,19 @@ export default function WorkforceSolutionManagement() {
 
         <HowWeWorkSectionManager />
         <HowWeWorkStepsManager />
+      </div>
+
+      {/* FAQ and CTA Section */}
+      <div className="mt-12 relative">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900">FAQ & CTA</h2>
+          <p className="text-sm text-gray-500 mt-1">Manage the frequently asked questions and call-to-action displayed on the website.</p>
+        </div>
+
+        <WorkforceSolutionFAQManager />
+        <div className="mt-8">
+          <WorkforceSolutionCTAManager />
+        </div>
       </div>
 
       {/* Testimonials Section */}

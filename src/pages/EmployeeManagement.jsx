@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 
 import EmployeeHeroSection from '../components/employee/EmployeeHeroSection';
+import EmployeeJourneyServicesWrapper from '../components/employee/EmployeeJourneyServicesWrapper';
+import EmployeeWhyChooseWrapper from '../components/employee/EmployeeWhyChooseWrapper';
+import EmployeeFAQManager from '../components/employee/EmployeeFAQManager';
+import EmployeeCTAManager from '../components/employee/EmployeeCTAManager';
 import FeaturedJobsSection from '../components/employee/FeaturedJobsSection';
 import PeoplePlacedSection from '../components/employee/PeoplePlacedSection';
 import TestimonialsSection from '../components/employee/TestimonialsSection';
@@ -32,6 +36,18 @@ export default function EmployeeManagement() {
       <div className="space-y-6">
         {/* EmployeeHeroSection is fully self-contained — manages its own state and API calls */}
         <EmployeeHeroSection />
+
+        {/* EmployeeJourneyServicesWrapper is also self-contained */}
+        <EmployeeJourneyServicesWrapper />
+
+        {/* EmployeeWhyChooseWrapper is also self-contained */}
+        <EmployeeWhyChooseWrapper />
+
+        {/* Employee FAQ Section */}
+        <EmployeeFAQManager />
+
+        {/* Employee CTA Section */}
+        <EmployeeCTAManager />
 
         {/* Remaining sections still use local data/onChange pattern */}
         <FeaturedJobsSection data={pageData.featuredJobs} onChange={handleSectionChange} />
