@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Outlet, Navigate } from "react-router-dom";
-import Loginpage from "../pages/Loginpage";
+import Loginpage from "../pages/LoginPage";
 import HomeManagement from "../pages/home";
 import AboutUsManagement from "../pages/Aboutus";
 import BlogsLayout from "../pages/BlogsLayout";
@@ -17,6 +17,7 @@ import WorkforceSolutionManagement from "../pages/WorkforceSolutionManagement";
 import SeoManagement from "../pages/SeoManagement";
 import Sidebar from "../components/sidebar";
 import Topbar from "../components/Topbar";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 const AdminLayout = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -37,12 +38,20 @@ const AdminLayout = () => {
 const Approute = () => {
     return (
         <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/admin/home" replace />} />
 
             <Route path="/login" element={<Loginpage />} />
-            <Route path="/admin" element={<AdminLayout />}>
+            <Route 
+                path="/admin" 
+                element={
+                    <ProtectedRoute>
+                        <AdminLayout />
+                    </ProtectedRoute>
+                }
+            >
                 <Route index element={<Navigate to="home" replace />} />
                 <Route path="home" element={<HomeManagement />} />
+                <Route path="dashboard" element={<Navigate to="/admin/home" replace />} />
                 <Route path="about-us" element={<AboutUsManagement />} />
                 <Route path="employer" element={<EmployerManagement />} />
                 <Route path="workforce-solution" element={<WorkforceSolutionManagement />} />

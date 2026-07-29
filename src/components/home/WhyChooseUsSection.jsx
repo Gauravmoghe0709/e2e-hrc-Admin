@@ -13,6 +13,7 @@ import {
 } from '../../services/home/approachCardService.js';
 
 const EMPTY_FORM = {
+  badge: "",
   title: '',
   description: '',
   stat1Value: '',
@@ -102,6 +103,7 @@ export default function WhyChooseUsSection() {
     setImageFile(null);
     setPreviewImage(card.image || '');
     setFormData({
+      badge: card.badge || "",
       title: card.title || '',
       description: card.description || '',
       stat1Value: card.stat1Value || '',
@@ -135,6 +137,7 @@ export default function WhyChooseUsSection() {
     setIsSaving(true);
     try {
       const payloadData = new FormData();
+      payloadData.append('badge', formData.badge);
       payloadData.append('title', formData.title);
       payloadData.append('description', formData.description);
       if (formData.stat1Value) payloadData.append('stat1Value', formData.stat1Value);
@@ -289,6 +292,9 @@ export default function WhyChooseUsSection() {
                       )}
                     </td>
                     <td className="p-4">
+                      <p className="font-semibold text-gray-800 text-sm">{card.badge}</p>
+                    </td>
+                    <td className="p-4">
                       <p className="font-semibold text-gray-800 text-sm">{card.title}</p>
                     </td>
                     <td className="p-4 hidden lg:table-cell text-sm text-gray-500 max-w-[200px] truncate">{card.description}</td>
@@ -335,6 +341,11 @@ export default function WhyChooseUsSection() {
             <div className="p-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">badge <span className="text-red-500">*</span></label>
+                    <input type="text" name="badge" value={formData.badge} onChange={handleFormChange}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
                     <input type="text" name="title" value={formData.title} onChange={handleFormChange}

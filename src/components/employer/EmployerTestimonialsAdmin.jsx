@@ -21,6 +21,7 @@ import {
   getAdminTestimonialCardById,
   updateTestimonialCard,
   updateTestimonialCardLogo,
+  updateCompanyLogo,
   deleteTestimonialCard,
 } from '../../services/employer/employerTestimonialService';
 
@@ -277,8 +278,16 @@ function CardModal({ isOpen, onClose, card, onSave, isSaving }) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Validate: must be an image
+    if (!file.type.startsWith('image/')) {
+      setFormError('Only image files are accepted (PNG, JPG, WEBP, etc.)');
+      e.target.value = '';
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       setFormError('Image size must be less than 5MB');
+      e.target.value = '';
       return;
     }
 
@@ -454,10 +463,27 @@ function CardModal({ isOpen, onClose, card, onSave, isSaving }) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo</label>
               <div className="mt-1 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors flex flex-col items-center justify-center relative overflow-hidden group h-64">
+                {/* Hidden file input — always in DOM so the admin can always pick a new file */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleLogoChange}
+                />
+
                 {logoPreview ? (
                   <>
                     <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain p-4" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      {/* Change logo button — triggers hidden file input */}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-white text-orange-500 hover:text-orange-600 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm"
+                      >
+                        <ImageIcon size={14} /> Change
+                      </button>
                       <button
                         type="button"
                         onClick={removeLogo}
@@ -468,18 +494,14 @@ function CardModal({ isOpen, onClose, card, onSave, isSaving }) {
                     </div>
                   </>
                 ) : (
-                  <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full text-gray-400 hover:text-orange-500 transition-colors">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center cursor-pointer w-full h-full text-gray-400 hover:text-orange-500 transition-colors"
+                  >
                     <ImageIcon size={32} className="mb-2 text-gray-300" />
                     <span className="text-sm font-medium">Click to upload</span>
                     <span className="text-xs text-gray-400 mt-0.5">PNG, JPG, WEBP (max 5MB)</span>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleLogoChange}
-                    />
-                  </label>
+                  </div>
                 )}
               </div>
             </div>
@@ -566,15 +588,17 @@ function TestimonialCardsManagement() {
 
         res = await updateTestimonialCard(selectedCard._id, textPayload);
 
-        // If logo file provided, upload via PATCH
+        // If a new logo file was selected, upload it via PATCH
         if (payload.logoFile) {
           const logoFormData = new FormData();
           logoFormData.append('companyLogo', payload.logoFile);
-          const logoRes = await updateTestimonialCardLogo(selectedCard._id, logoFormData);
+          const logoRes = await updateCompanyLogo(selectedCard._id, logoFormData);
+          // Use the updated card data (which contains the new logo URL) as the final result
           if (logoRes && logoRes.data) {
-            res.data = logoRes.data;
+            res = logoRes;
           }
         }
+        // If no new logo selected, the existing logo is untouched — no action needed
       } else {
         // Create new card
         const formData = new FormData();

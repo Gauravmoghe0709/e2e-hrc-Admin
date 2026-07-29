@@ -9,6 +9,7 @@ import EmployeeCardsSection from '../components/home/EmployeeCardsSection';
 import HowWeWorkSection from '../components/home/HowWeWorkSection';
 import LocationCardsSection from '../components/home/LocationCardsSection';
 import ContactCTASection from '../components/home/ContactCTASection';
+import TrustedBySection from '../components/home/TrustedBySection';
 import { getHeroData, updateHeroData, uploadHeroImage } from '../services/api';
 
 export default function HomeManagement() {
@@ -127,6 +128,9 @@ export default function HomeManagement() {
 
         {/* Contact CTA — fully self-contained, has its own save button */}
         <ContactCTASection />
+
+        {/* Trusted By — fully self-contained, section + logos management */}
+        <TrustedBySection />
       </div>
     </div>
   );

@@ -1,308 +1,467 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Plus, Edit2, Trash2, X, Loader2 } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Plus, Edit2, Trash2, Save, Loader2, X, Upload, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getAboutTestimonials, createAboutTestimonial, updateAboutTestimonial, deleteAboutTestimonial } from '../../services/api';
+import {
+  getSection,
+  createSection,
+  updateSection,
+  getCards,
+  createCard,
+  updateCard,
+  deleteCard,
+  uploadLogo
+} from '../../services/aboutUs/testimonialService';
 
-const EMPTY_FORM = {
+const EMPTY_SECTION = {
   badgeText: 'Testimonials',
   sectionTitle: 'What They Are Saying',
-  highlightText: 'Saying',
-  sectionDescription: 'Discover the stories and experiences of individuals and companies who have found success and excellence through E2E HRC.',
-  testimonialTitle: '',
-  review: '',
+  sectionDescription: 'Discover the stories and experiences of our satisfied clients and candidates.',
+  isActive: true,
+};
+
+const EMPTY_CARD = {
   companyName: '',
-  order: 0,
+  title: '',
+  description: '',
+  order: 1,
   isActive: true,
 };
 
 export default function TestimonialsSection() {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [testimonials, setTestimonials] = useState([]);
+  // Section State
+  const [sectionData, setSectionData] = useState(EMPTY_SECTION);
+  const [sectionId, setSectionId] = useState(null);
+  const [isSectionLoading, setIsSectionLoading] = useState(true);
+  const [isSectionSaving, setIsSectionSaving] = useState(false);
+  const [isSectionExpanded, setIsSectionExpanded] = useState(true);
 
+  // Cards State
+  const [cards, setCards] = useState([]);
+  const [isCardsLoading, setIsCardsLoading] = useState(true);
+  const [isCardsExpanded, setIsCardsExpanded] = useState(true);
+  
+  // Card Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState(EMPTY_CARD);
+  
+  // Image Upload State
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
+
+  // Delete Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState(EMPTY_FORM);
-
   useEffect(() => {
-    loadTestimonials();
+    loadSection();
+    loadCards();
   }, []);
 
-  const loadTestimonials = async () => {
-    setIsLoading(true);
+  // --- SECTION MANAGEMENT ---
+  const loadSection = async () => {
+    setIsSectionLoading(true);
     try {
-      const res = await getAboutTestimonials();
-      setTestimonials(res.data || []);
+      const res = await getSection();
+      if (res.data) {
+        setSectionData({
+          badgeText: res.data.badgeText || '',
+          sectionTitle: res.data.sectionTitle || '',
+          sectionDescription: res.data.sectionDescription || '',
+          isActive: res.data.isActive !== undefined ? res.data.isActive : true,
+        });
+        if (res.data._id) setSectionId(res.data._id);
+      }
     } catch (error) {
-      toast.error('Failed to load testimonials');
+      console.error(error);
+      toast.error('Failed to load Section details');
     } finally {
-      setIsLoading(false);
+      setIsSectionLoading(false);
     }
   };
 
-  const handleFormChange = (e) => {
+  const handleSectionChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    setSectionData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const saveSection = async () => {
+    if (!sectionData.sectionTitle.trim()) {
+      toast.error('Section Title is required');
+      return;
+    }
+    setIsSectionSaving(true);
+    try {
+      if (sectionId) {
+        await updateSection(sectionId, sectionData);
+        toast.success('Section updated successfully');
+      } else {
+        const res = await createSection(sectionData);
+        if (res.data?._id) setSectionId(res.data._id);
+        toast.success('Section created successfully');
+      }
+      await loadSection();
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.message || 'Failed to save section');
+    } finally {
+      setIsSectionSaving(false);
+    }
+  };
+
+  // --- CARDS MANAGEMENT ---
+  const loadCards = async () => {
+    setIsCardsLoading(true);
+    try {
+      const res = await getCards();
+      setCards(res.data || []);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load Cards');
+    } finally {
+      setIsCardsLoading(false);
+    }
   };
 
   const openAddModal = () => {
     setEditingId(null);
-    setFormData({ ...EMPTY_FORM, order: testimonials.length + 1 });
+    setFormData({ ...EMPTY_CARD, order: cards.length + 1 });
+    setImageFile(null);
+    setImagePreview(null);
     setIsModalOpen(true);
   };
 
-  const openEditModal = (item) => {
-    setEditingId(item._id);
+  const openEditModal = (card) => {
+    setEditingId(card._id);
     setFormData({
-      badgeText: item.badgeText || 'Testimonials',
-      sectionTitle: item.sectionTitle || 'What They Are Saying',
-      highlightText: item.highlightText || 'Saying',
-      sectionDescription: item.sectionDescription || 'Discover the stories and experiences of individuals and companies who have found success and excellence through E2E HRC.',
-      testimonialTitle: item.testimonialTitle || '',
-      review: item.review || '',
-      companyName: item.companyName || '',
-      order: item.order ?? 0,
-      isActive: item.isActive ?? true,
+      companyName: card.companyName || '',
+      title: card.title || '',
+      description: card.description || '',
+      order: card.order ?? 1,
+      isActive: card.isActive !== undefined ? card.isActive : true,
     });
+    setImageFile(null);
+    setImagePreview(card.companyLogo || null);
     setIsModalOpen(true);
   };
 
-  const openDeleteModal = (id) => {
-    setEditingId(id);
-    setIsDeleteModalOpen(true);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData(EMPTY_CARD);
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const saveTestimonial = async () => {
-    if (!formData.review.trim()) {
-      toast.error('Review text is required');
+  const handleCardChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const saveCard = async () => {
+    if (!formData.companyName.trim() || !formData.title.trim() || !formData.description.trim()) {
+      toast.error('Company Name, Title, and Description are required');
       return;
     }
 
     setIsSaving(true);
     try {
+      let savedCardId = editingId;
+      
       const payload = {
-        badgeText: formData.badgeText,
-        sectionTitle: formData.sectionTitle,
-        highlightText: formData.highlightText,
-        sectionDescription: formData.sectionDescription,
-        testimonialTitle: formData.testimonialTitle,
-        review: formData.review,
         companyName: formData.companyName,
+        title: formData.title,
+        description: formData.description,
         order: Number(formData.order),
         isActive: formData.isActive,
       };
 
       if (editingId) {
-        await updateAboutTestimonial(editingId, payload);
+        await updateCard(editingId, payload);
+        toast.success('Card updated successfully');
       } else {
-        await createAboutTestimonial(payload);
+        const res = await createCard(payload);
+        savedCardId = res.data._id;
+        toast.success('Card created successfully');
       }
 
-      toast.success(editingId ? 'Testimonial updated successfully' : 'Testimonial added successfully');
-      setIsModalOpen(false);
-      loadTestimonials();
+      if (imageFile && savedCardId) {
+        await uploadLogo(savedCardId, imageFile);
+      }
+
+      closeModal();
+      await loadCards();
     } catch (error) {
-      toast.error(error.message || 'Failed to save testimonial');
+      console.error(error);
+      toast.error(error?.message || 'Failed to save card');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const deleteTestimonial = async () => {
-    if (!editingId) return;
+  const openDeleteModal = (id) => {
+    setDeletingId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
     setIsDeleting(true);
     try {
-      await deleteAboutTestimonial(editingId);
-      toast.success('Testimonial deleted successfully');
+      await deleteCard(deletingId);
+      toast.success('Card deleted successfully');
       setIsDeleteModalOpen(false);
-      loadTestimonials();
+      setDeletingId(null);
+      await loadCards();
     } catch (error) {
-      toast.error(error.message || 'Failed to delete testimonial');
+      console.error(error);
+      toast.error(error?.message || 'Failed to delete card');
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const truncate = (str, len = 60) => (str && str.length > len ? `${str.slice(0, len)}…` : str);
-
   return (
-    <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div
-        className="flex cursor-pointer select-none items-center justify-between border-b border-gray-200 bg-gray-50 p-5"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-gray-800">Testimonials Section</h2>
-          {isLoading ? (
-            <span className="animate-pulse rounded-md bg-gray-100 px-2 py-1 text-xs font-bold text-gray-400">Loading...</span>
-          ) : (
-            <span className="rounded-md bg-orange-100 px-2 py-1 text-xs font-bold text-orange-600">{testimonials.length} Items</span>
-          )}
+    <div className="space-y-6">
+      {/* SECTION DETAILS */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between p-5 bg-gray-50 border-b border-gray-200 cursor-pointer select-none" onClick={() => setIsSectionExpanded(!isSectionExpanded)}>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-800">Testimonials Section Details</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            {isSectionExpanded ? <X size={18} className="text-gray-500" /> : <Plus size={18} className="text-gray-500" />}
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              openAddModal();
-            }}
-            className="flex items-center gap-1 rounded-lg bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600"
-          >
-            <Plus size={16} /> Add Testimonial
-          </button>
-          {isExpanded ? <ChevronUp size={20} className="text-gray-500" /> : <ChevronDown size={20} className="text-gray-500" />}
-        </div>
-      </div>
 
-      {isExpanded && (
-        <div className="overflow-x-auto p-0">
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="animate-spin text-orange-500" size={32} />
-            </div>
-          ) : testimonials.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No testimonials added yet. Click "Add Testimonial" to create one.</div>
-          ) : (
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-gray-200 bg-white text-xs uppercase tracking-wider text-gray-500">
-                  <th className="p-4 font-medium">Title</th>
-                  <th className="p-4 font-medium">Review</th>
-                  <th className="p-4 font-medium hidden sm:table-cell">Company</th>
-                  <th className="p-4 font-medium hidden sm:table-cell">Order</th>
-                  <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {testimonials.map((item) => (
-                  <tr key={item._id} className="transition-colors hover:bg-gray-50">
-                    <td className="p-4 text-sm font-semibold text-gray-800">
-                      {item.testimonialTitle || 'Client Feedback'}
-                      <p className="text-xs font-normal text-gray-500">{item.companyName}</p>
-                    </td>
-                    <td className="max-w-xs p-4 text-sm text-gray-500">{truncate(item.review)}</td>
-                    <td className="hidden p-4 text-sm text-gray-500 sm:table-cell">{item.companyName}</td>
-                    <td className="hidden p-4 text-sm text-gray-500 sm:table-cell">{item.order}</td>
-                    <td className="p-4">
-                      <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${item.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {item.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="space-x-2 p-4 text-right">
-                      <button onClick={() => openEditModal(item)} className="rounded-md p-1.5 text-blue-500 transition-colors hover:bg-blue-50" title="Edit">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => openDeleteModal(item._id)} className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50" title="Delete">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {isModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-bold text-gray-800">{editingId ? 'Edit Testimonial' : 'Add Testimonial'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 transition-colors hover:text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="space-y-4">
+        {isSectionExpanded && (
+          <div className="p-6 space-y-4">
+            {isSectionLoading ? (
+              <div className="text-sm text-gray-500">Loading section data...</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Badge Text</label>
-                    <input type="text" name="badgeText" value={formData.badgeText} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. Testimonials" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Badge Text</label>
+                    <input type="text" name="badgeText" value={sectionData.badgeText} onChange={handleSectionChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" placeholder="Testimonials" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Section Title</label>
-                    <input type="text" name="sectionTitle" value={formData.sectionTitle} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. What They Are Saying" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Highlight Text</label>
-                    <input type="text" name="highlightText" value={formData.highlightText} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. Saying" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Section Description</label>
-                    <textarea name="sectionDescription" value={formData.sectionDescription} onChange={handleFormChange} rows={3} className="w-full resize-none rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="Section intro text..." />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Section Title</label>
+                    <input type="text" name="sectionTitle" value={sectionData.sectionTitle} onChange={handleSectionChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" placeholder="What They Are Saying" />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Section Description</label>
+                  <textarea name="sectionDescription" value={sectionData.sectionDescription} onChange={handleSectionChange} rows={3} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors resize-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <div className="mt-2 flex items-center gap-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" name="isActive" checked={sectionData.isActive} onChange={handleSectionChange} className="sr-only peer" />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500" />
+                    </label>
+                    <span className="text-sm text-gray-600">{sectionData.isActive ? 'Active' : 'Inactive'}</span>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-4 border-t border-gray-100">
+                  <button onClick={saveSection} disabled={isSectionSaving} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 transition-colors shadow-sm disabled:bg-orange-300">
+                    {isSectionSaving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> {sectionId ? 'Update Section' : 'Save Section'}</>}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Testimonial Title</label>
-                    <input type="text" name="testimonialTitle" value={formData.testimonialTitle} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. Efficient and Effective Hiring Process!" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Review <span className="text-red-500">*</span></label>
-                    <textarea name="review" value={formData.review} onChange={handleFormChange} rows={5} className="w-full resize-none rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="Testimonial review text..." />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">Company Name</label>
-                    <input type="text" name="companyName" value={formData.companyName} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" placeholder="e.g. Ford" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">Display Order</label>
-                      <input type="number" name="order" value={formData.order} onChange={handleFormChange} className="w-full rounded-lg border border-gray-200 px-4 py-2 outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
-                      <div className="mt-2 flex items-center gap-2">
-                        <label className="relative inline-flex cursor-pointer items-center">
-                          <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleFormChange} className="peer sr-only" />
-                          <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-orange-500 peer-checked:after:translate-x-full peer-focus:outline-none"></div>
-                        </label>
-                        <span className="text-sm text-gray-600">{formData.isActive ? 'Active' : 'Inactive'}</span>
+      {/* CARDS LIST */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div className="flex items-center justify-between p-5 bg-gray-50 border-b border-gray-200 cursor-pointer select-none" onClick={() => setIsCardsExpanded(!isCardsExpanded)}>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-800">Testimonial Cards</h2>
+            <span className="bg-orange-100 text-orange-600 text-xs font-bold px-2 py-1 rounded-md">{cards.length} Cards</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={(e) => { e.stopPropagation(); openAddModal(); }} className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+              <Plus size={16} /> Add Card
+            </button>
+            {isCardsExpanded ? <X size={18} className="text-gray-500" /> : <Plus size={18} className="text-gray-500" />}
+          </div>
+        </div>
+
+        {isCardsExpanded && (
+          <div className="p-0 overflow-x-auto">
+            {isCardsLoading ? (
+              <div className="p-8 text-sm text-gray-500">Loading cards...</div>
+            ) : cards.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No testimonial cards added yet.</div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500">
+                    <th className="p-4 font-medium">Logo</th>
+                    <th className="p-4 font-medium">Company Name</th>
+                    <th className="p-4 font-medium">Title</th>
+                    <th className="p-4 font-medium hidden md:table-cell">Order</th>
+                    <th className="p-4 font-medium">Status</th>
+                    <th className="p-4 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {cards.map((card) => (
+                    <tr key={card._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="p-4">
+                        {card.companyLogo ? (
+                          <img src={card.companyLogo} alt={card.companyName} className="w-10 h-10 object-contain bg-white border border-gray-100 rounded" />
+                        ) : (
+                          <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-400">
+                            <ImageIcon size={18} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-4 text-sm font-medium text-gray-700">{card.companyName}</td>
+                      <td className="p-4 text-sm text-gray-700">{card.title}</td>
+                      <td className="p-4 hidden md:table-cell text-sm text-gray-500">{card.order}</td>
+                      <td className="p-4">
+                        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${card.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {card.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right space-x-2">
+                        <button onClick={() => openEditModal(card)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md transition-colors" title="Edit">
+                          <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => openDeleteModal(card._id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* CARD MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between shrink-0">
+              <h3 className="text-lg font-bold text-gray-800">{editingId ? 'Edit Card' : 'Add New Card'}</h3>
+              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {/* Logo Upload Section */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Company Logo (Optional)</label>
+                <div className="flex items-start gap-6">
+                  <div className="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden relative group">
+                    {imagePreview ? (
+                      <>
+                        <img src={imagePreview} alt="Preview" className="w-full h-full object-contain p-2" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-white rounded-full text-gray-700 hover:text-blue-500 transition-colors">
+                            <Upload size={16} />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center">
+                        <ImageIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                        <span className="text-xs text-gray-500 font-medium">No Image</span>
                       </div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <p className="text-sm text-gray-500">Upload a logo for the company. Recommended format: PNG with transparent background. Max size: 5MB.</p>
+                    <div className="flex items-center gap-3">
+                      <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
+                      <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                        <Upload size={16} /> Choose Image
+                      </button>
+                      {imagePreview && (
+                        <button onClick={() => { setImageFile(null); setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2">
+                          <Trash2 size={16} /> Remove
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-end gap-3 rounded-b-xl border-t border-gray-200 bg-gray-50 px-6 py-4">
-              <button onClick={() => setIsModalOpen(false)} disabled={isSaving} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-                Cancel
-              </button>
-              <button onClick={saveTestimonial} disabled={isSaving} className="flex items-center gap-2 rounded-lg border border-transparent bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-orange-600">
-                {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-                {isSaving ? 'Saving...' : 'Save Testimonial'}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+                  <input type="text" name="companyName" value={formData.companyName} onChange={handleCardChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title (e.g. CEO) *</label>
+                  <input type="text" name="title" value={formData.title} onChange={handleCardChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                <textarea name="description" value={formData.description} onChange={handleCardChange} rows={4} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors resize-none" />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Display Order *</label>
+                  <input type="number" name="order" value={formData.order} onChange={handleCardChange} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <div className="mt-2 flex items-center gap-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleCardChange} className="sr-only peer" />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500" />
+                    </label>
+                    <span className="text-sm text-gray-600">{formData.isActive ? 'Active' : 'Inactive'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3 shrink-0">
+              <button onClick={closeModal} disabled={isSaving} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">Cancel</button>
+              <button onClick={saveCard} disabled={isSaving} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 transition-colors shadow-sm disabled:bg-orange-300">
+                {isSaving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> {editingId ? 'Update Card' : 'Save Card'}</>}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* DELETE MODAL */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm overflow-hidden rounded-xl bg-white p-6 text-center shadow-xl">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-500">
-              <Trash2 size={24} />
-            </div>
-            <h3 className="mb-2 text-lg font-bold text-gray-900">Delete Testimonial?</h3>
-            <p className="mb-6 text-sm text-gray-500">Are you sure you want to delete this testimonial? This action cannot be undone.</p>
+        <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4"><Trash2 size={24} /></div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Card?</h3>
+            <p className="text-sm text-gray-500 mb-6">This action cannot be undone.</p>
             <div className="flex items-center justify-center gap-3">
-              <button onClick={() => setIsDeleteModalOpen(false)} disabled={isDeleting} className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-                Cancel
-              </button>
-              <button onClick={deleteTestimonial} disabled={isDeleting} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-transparent bg-red-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-600">
-                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : null}
-                {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+              <button onClick={() => { setIsDeleteModalOpen(false); setDeletingId(null); }} disabled={isDeleting} className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50">Cancel</button>
+              <button onClick={confirmDelete} disabled={isDeleting} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 border border-transparent rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:bg-red-300">
+                {isDeleting ? <><Loader2 size={14} className="animate-spin" /> Deleting...</> : 'Yes, Delete'}
               </button>
             </div>
           </div>

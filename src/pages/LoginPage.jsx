@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import { login as apiLogin, register as apiRegister } from "../services/authService";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const [tab, setTab] = useState("login");
@@ -10,41 +14,108 @@ export default function LoginPage() {
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [registerForm, setRegisterForm] = useState({
-    fullName: "", email: "", phone: "", department: "", password: "", confirm: "",
+    fullName: "", email: "", password: "", confirm: "",
   });
 
-  const handleLogin = (e) => {
+  const { login: contextLogin } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  // Validate email format
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validation
     if (!loginForm.email || !loginForm.password) {
       setError("Please fill in all fields.");
       return;
     }
+
+    if (!isValidEmail(loginForm.email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const response = await apiLogin(loginForm.email, loginForm.password);
+
+      // Save to context
+      contextLogin(response.user, response.token || loginForm.email);
+
+      // Show success toast
+      toast.success("Login successful!");
+
+      // Navigate to dashboard
+      navigate("/admin/home");
+    } catch (err) {
+      setError(err.message || "Login failed. Please try again.");
+      toast.error(err.message || "Login failed");
+    } finally {
       setLoading(false);
-      setError("Invalid credentials. Please try again.");
-    }, 1500);
+    }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
-    const { fullName, email, phone, department, password, confirm } = registerForm;
-    if (!fullName || !email || !phone || !department || !password || !confirm) {
+
+    const { fullName, email, password, confirm } = registerForm;
+
+    // Validation
+    if (!fullName || !email || !password || !confirm) {
       setError("Please fill in all fields.");
       return;
     }
+
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid work email address.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
     if (password !== confirm) {
       setError("Passwords do not match.");
       return;
     }
+
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      await apiRegister(fullName, email, password, confirm);
+
+      setSuccess("Registration submitted! Please check your email for admin approval.");
+      toast.success("Registration successful! Awaiting admin approval.");
+
+      // Clear form
+      setRegisterForm({
+        fullName: "",
+        email: "",
+        password: "",
+        confirm: "",
+      });
+
+      // Switch to login tab after 2 seconds
+      setTimeout(() => {
+        setTab("login");
+      }, 2000);
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.");
+      toast.error(err.message || "Registration failed");
+    } finally {
       setLoading(false);
-      setSuccess("Registration submitted! Await admin approval.");
-    }, 1500);
+    }
   };
 
   const switchTab = (t) => {
@@ -231,45 +302,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Phone + Department row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-orange-500 text-xs font-bold uppercase tracking-widest mb-1.5">Phone</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
-                      <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.338c0-.93.801-1.67 1.788-1.588l1.723.144a1.5 1.5 0 011.33 1.168l.48 2.405a1.5 1.5 0 01-.463 1.479l-.97.776a11.036 11.036 0 005.604 5.604l.776-.97a1.5 1.5 0 011.479-.463l2.404.48a1.5 1.5 0 011.168 1.33l.144 1.723c.082.987-.658 1.788-1.588 1.788H19.5a17.25 17.25 0 01-17.25-17.25V6.338z" />
-                      </svg>
-                    </span>
-                    <input type="tel" placeholder="+91 9876543210"
-                      value={registerForm.phone}
-                      onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 text-gray-800 placeholder-gray-300 rounded-xl pl-10 pr-3 py-3 text-sm outline-none transition" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-orange-500 text-xs font-bold uppercase tracking-widest mb-1.5">Department</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
-                      <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
-                      </svg>
-                    </span>
-                    <select
-                      value={registerForm.department}
-                      onChange={(e) => setRegisterForm({ ...registerForm, department: e.target.value })}
-                      className="w-full bg-gray-50 border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 text-gray-800 rounded-xl pl-10 pr-3 py-3 text-sm outline-none transition appearance-none">
-                      <option value="">Select</option>
-                      <option>HR</option>
-                      <option>Finance</option>
-                      <option>IT</option>
-                      <option>Operations</option>
-                      <option>Legal</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
               {/* Password */}
               <div>
                 <label className="block text-orange-500 text-xs font-bold uppercase tracking-widest mb-1.5">Password</label>
@@ -317,17 +349,6 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Terms */}
-              <label className="flex items-start gap-2 cursor-pointer group">
-                <input type="checkbox" className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-orange-500" />
-                <span className="text-gray-500 text-xs leading-relaxed">
-                  I agree to the{" "}
-                  <span className="text-orange-500 font-semibold cursor-pointer hover:underline">Terms of Service</span>{" "}
-                  and{" "}
-                  <span className="text-orange-500 font-semibold cursor-pointer hover:underline">Privacy Policy</span>
-                </span>
-              </label>
 
               {error && (
                 <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
