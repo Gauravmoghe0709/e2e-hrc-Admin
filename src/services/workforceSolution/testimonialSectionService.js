@@ -9,14 +9,14 @@ const handleResponse = async (response) => {
 };
 
 export const getTestimonialSections = async () => {
-  const response = await fetch(`${API_BASE}/admin/testimonial-section`, {
+  const response = await fetch(`${API_BASE}/admin/workforce-solutions/testimonial-section`, {
     credentials: 'include',
   });
   return handleResponse(response);
 };
 
 export const createTestimonialSection = async (data) => {
-  const response = await fetch(`${API_BASE}/admin/testimonial-section`, {
+  const response = await fetch(`${API_BASE}/admin/workforce-solutions/testimonial-section`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -26,7 +26,7 @@ export const createTestimonialSection = async (data) => {
 };
 
 export const updateTestimonialSection = async (id, data) => {
-  const response = await fetch(`${API_BASE}/admin/testimonial-section/${id}`, {
+  const response = await fetch(`${API_BASE}/admin/workforce-solutions/testimonial-section/${id}`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -36,7 +36,7 @@ export const updateTestimonialSection = async (id, data) => {
 };
 
 export const deleteTestimonialSection = async (id) => {
-  const response = await fetch(`${API_BASE}/admin/testimonial-section/${id}`, {
+  const response = await fetch(`${API_BASE}/admin/workforce-solutions/testimonial-section/${id}`, {
     method: 'DELETE',
     credentials: 'include',
   });

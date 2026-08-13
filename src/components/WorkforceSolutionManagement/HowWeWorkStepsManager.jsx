@@ -143,10 +143,15 @@ export default function HowWeWorkStepsManager() {
             )}
           </div>
           <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors shadow-sm"
+            onClick={steps.length >= 6 ? () => toast.error("Maximum 6 steps are allowed") : openAddModal}
+            disabled={steps.length >= 6}
+            className={`flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors shadow-sm ${steps.length >= 6
+              ? "bg-gray-300 cursor-not-allowed opacity-50"
+              : "bg-orange-500 hover:bg-orange-600"
+              }`}
           >
-            <Plus size={16} /> Add Step
+            <Plus size={16} />
+            Add Step
           </button>
         </div>
 
