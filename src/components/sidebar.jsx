@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Home,
   Info,
@@ -13,6 +13,7 @@ import {
   Users,
   LayoutPanelTop,
   BriefcaseBusiness,
+  Handshake,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -20,8 +21,9 @@ const sidebarItems = [
   { title: "Home", icon: Home, path: "/admin/home" },
   { title: "About Us", icon: Info, path: "/admin/about-us" },
   { title: "Employer", icon: Building2, path: "/admin/employer" },
-  { title: "Workforce Solution", icon: BriefcaseBusiness, path: "/admin/workforce-solution" },
   { title: "Employee", icon: Users, path: "/admin/employee" },
+  { title: "Workforce Solution", icon: BriefcaseBusiness, path: "/admin/workforce-solution" },
+  { title: "Become a Partner", icon: Handshake, path: "/admin/become-partner" },
   {
     title: "Blogs",
     icon: FileText,
@@ -32,13 +34,9 @@ const sidebarItems = [
     ],
   },
   {
-    title: "Contact Us",
+    title: "Contact Enquiries",
     icon: MessageSquareText,
     path: "/admin/contact/enquiries",
-    children: [
-      { title: "Contact Settings", path: "/admin/contact/settings" },
-      { title: "Contact Enquiries", path: "/admin/contact/enquiries" },
-    ],
   },
   { title: "Footer", icon: LayoutPanelTop, path: "/admin/footer" },
   { title: "SEO Management", icon: LayoutPanelTop, path: "/admin/seo" },
@@ -46,6 +44,31 @@ const sidebarItems = [
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const location = useLocation();
+  const [hasNewContactEnquiries, setHasNewContactEnquiries] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('contactEnquiriesNewCount');
+    return Number(saved || 0) > 0;
+  });
+
+  useEffect(() => {
+    const updateNotification = (event) => {
+      const count = Number(event?.detail?.count || 0);
+      setHasNewContactEnquiries(count > 0);
+    };
+
+    const handleStorage = () => {
+      const count = Number(localStorage.getItem('contactEnquiriesNewCount') || 0);
+      setHasNewContactEnquiries(count > 0);
+    };
+
+    window.addEventListener('contact-enquiries-count-changed', updateNotification);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('contact-enquiries-count-changed', updateNotification);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   // Track which parent menus are expanded
   const [expandedMenus, setExpandedMenus] = useState(() => {
@@ -253,6 +276,9 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
                     {/* Label */}
                     <span className="flex-1 truncate">{item.title}</span>
+                    {item.title === "Contact Enquiries" && hasNewContactEnquiries && (
+                      <span className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-sm ring-2 ring-white flex-shrink-0" />
+                    )}
 
                     {/* Trailing chevron */}
                     <ChevronRight

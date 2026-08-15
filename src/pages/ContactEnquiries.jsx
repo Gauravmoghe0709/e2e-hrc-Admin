@@ -1,78 +1,135 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Search, Eye, Trash2, X, FileText, Download, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
-
-// Mock data for demonstration
-const MOCK_ENQUIRIES = [
-  {
-    id: 1,
-    firstName: 'John',
-    lastName: 'Doe',
-    company: 'Acme Corp',
-    emailAddress: 'john.doe@acmecorp.com',
-    userType: 'Employer',
-    subject: 'Hiring Services',
-    message: 'We are looking to hire 5 software engineers for our new project.',
-    attachment: 'requirements.pdf',
-    submittedDate: '2025-01-15',
-  },
-  {
-    id: 2,
-    firstName: 'Jane',
-    lastName: 'Smith',
-    company: 'Tech Solutions',
-    emailAddress: 'jane@techsolutions.com',
-    userType: 'Candidate',
-    subject: 'Job Application',
-    message: 'I would like to apply for the Senior Developer role.',
-    attachment: 'resume_jane.pdf',
-    submittedDate: '2025-01-14',
-  },
-  {
-    id: 3,
-    firstName: 'Alice',
-    lastName: 'Johnson',
-    company: 'Global HR',
-    emailAddress: 'alice@globalhr.com',
-    userType: 'Partner',
-    subject: 'Partnership Inquiry',
-    message: 'Interested in partnering with your agency for international recruitment.',
-    attachment: '',
-    submittedDate: '2025-01-10',
-  }
-];
+import {
+  getAllPartnershipEnquiries,
+  getPartnershipEnquiryById,
+  updatePartnershipEnquiry,
+  deletePartnershipEnquiry,
+} from '../services/becomePartner/partnershipEnquiryService';
 
 const ITEMS_PER_PAGE = 8;
 
+const emitContactCountUpdate = (count) => {
+  localStorage.setItem('contactEnquiriesNewCount', String(count));
+  window.dispatchEvent(new CustomEvent('contact-enquiries-count-changed', { detail: { count } }));
+};
+
+const normalizeEnquiry = (enquiry) => {
+  const fullName = (enquiry?.name || '').trim();
+  const nameParts = fullName.split(/\s+/).filter(Boolean);
+  const firstName = nameParts.shift() || '';
+  const lastName = nameParts.join(' ') || '';
+
+  return {
+    id: enquiry?._id || enquiry?.id,
+    firstName,
+    lastName,
+    company: enquiry?.company || '',
+    emailAddress: enquiry?.email || '',
+    userType: enquiry?.userType || 'Partner',
+    subject: 'Partnership Inquiry',
+    message: enquiry?.message || '',
+    attachment: '',
+    submittedDate: enquiry?.createdAt
+      ? new Date(enquiry.createdAt).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : '—',
+    status: enquiry?.status || 'new',
+    countryCode: enquiry?.countryCode || '',
+    contactNumber: enquiry?.contactNumber || '',
+    createdAt: enquiry?.createdAt || null,
+    updatedAt: enquiry?.updatedAt || null,
+    raw: enquiry || {},
+  };
+};
+
 export default function ContactEnquiries() {
-  const [enquiries, setEnquiries] = useState(MOCK_ENQUIRIES);
+  const [enquiries, setEnquiries] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
 
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [viewingEnquiry, setViewingEnquiry] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // ── Filtering & Pagination ──────────────────────────────────────────────────
-  const filtered = enquiries.filter(eq => {
+  const updateNewEnquiryCount = (items) => {
+    const newCount = items.filter((item) => item.status === 'new').length;
+    emitContactCountUpdate(newCount);
+  };
+
+  const loadEnquiries = async () => {
+    setLoading(true);
+
+    try {
+      const response = await getAllPartnershipEnquiries();
+      const items = Array.isArray(response) ? response.map(normalizeEnquiry) : [];
+      setEnquiries(items);
+      updateNewEnquiryCount(items);
+    } catch (error) {
+      console.error('Failed to load enquiries:', error);
+      toast.error(error.message || 'Failed to load enquiries. Please try again.');
+      setEnquiries([]);
+      updateNewEnquiryCount([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEnquiries();
+  }, []);
+
+  const filtered = enquiries.filter((eq) => {
     const term = searchQuery.toLowerCase();
-    return (
-      eq.firstName.toLowerCase().includes(term) ||
-      eq.lastName.toLowerCase().includes(term) ||
-      eq.company.toLowerCase().includes(term) ||
-      eq.emailAddress.toLowerCase().includes(term) ||
-      eq.subject.toLowerCase().includes(term)
-    );
+    return [
+      eq.firstName,
+      eq.lastName,
+      eq.emailAddress,
+      eq.company,
+      eq.subject,
+      eq.message,
+      eq.countryCode,
+      eq.contactNumber,
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(term);
   });
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
-  const openViewModal = (enquiry) => {
-    setViewingEnquiry(enquiry);
-    setIsViewModalOpen(true);
+  const openViewModal = async (enquiry) => {
+    try {
+      const detail = await getPartnershipEnquiryById(enquiry.id);
+      const normalizedDetail = normalizeEnquiry(detail);
+      setViewingEnquiry(normalizedDetail);
+      setIsViewModalOpen(true);
+
+      if (normalizedDetail.status === 'new') {
+        const updated = await updatePartnershipEnquiry(normalizedDetail.id, { status: 'read' });
+        const updatedNormalized = normalizeEnquiry(updated);
+
+        setEnquiries((prev) =>
+          prev.map((item) => (item.id === updatedNormalized.id ? updatedNormalized : item))
+        );
+        updateNewEnquiryCount(
+          enquiries.map((item) =>
+            item.id === updatedNormalized.id ? updatedNormalized : item
+          )
+        );
+        setViewingEnquiry(updatedNormalized);
+      }
+    } catch (error) {
+      console.error('Failed to open enquiry details:', error);
+      toast.error(error.message || 'Failed to load enquiry details.');
+    }
   };
 
   const openDeleteModal = (id) => {
@@ -80,20 +137,32 @@ export default function ContactEnquiries() {
     setIsDeleteModalOpen(true);
   };
 
-  const deleteEnquiry = () => {
-    if (deletingId !== null) {
-      setEnquiries(prev => prev.filter(eq => eq.id !== deletingId));
-      toast.success('Enquiry deleted successfully!');
+  const deleteEnquiry = async () => {
+    if (deletingId === null) {
+      return;
     }
-    setIsDeleteModalOpen(false);
-    setCurrentPage(1);
+
+    try {
+      await deletePartnershipEnquiry(deletingId);
+      const updated = enquiries.filter((eq) => eq.id !== deletingId);
+      setEnquiries(updated);
+      updateNewEnquiryCount(updated);
+      toast.success('Enquiry deleted successfully.');
+    } catch (error) {
+      console.error('Failed to delete enquiry:', error);
+      toast.error(error.message || 'Failed to delete enquiry.');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeletingId(null);
+      setCurrentPage(1);
+      setIsViewModalOpen(false);
+    }
   };
 
   return (
     <div className="max-w-6xl mx-auto pb-20 relative md:mt-15 mt-5">
       <Toaster position="top-right" />
 
-      {/* ── Page Header ──────────────────────────────────────────────────────── */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Contact Enquiries</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -101,9 +170,7 @@ export default function ContactEnquiries() {
         </p>
       </div>
 
-      {/* ── Main Card ─────────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Card Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-gray-50 border-b border-gray-200 gap-4">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-gray-800">All Enquiries</h2>
@@ -111,7 +178,6 @@ export default function ContactEnquiries() {
           </div>
         </div>
 
-        {/* ── Filters ──────────────────────────────────────────────────────────── */}
         <div className="p-4 border-b border-gray-100 bg-white">
           <div className="relative max-w-md">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -119,15 +185,21 @@ export default function ContactEnquiries() {
               type="text"
               placeholder="Search by name, email, company, or subject..."
               value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none text-sm transition-colors"
             />
           </div>
         </div>
 
-        {/* ── Table ────────────────────────────────────────────────────────────── */}
         <div className="overflow-x-auto">
-          {paginated.length === 0 ? (
+          {loading ? (
+            <div className="p-16 text-center">
+              <p className="text-sm text-gray-500">Loading enquiries...</p>
+            </div>
+          ) : paginated.length === 0 ? (
             <div className="p-16 text-center">
               <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4">
                 <Inbox size={28} className="text-orange-300" />
@@ -176,7 +248,6 @@ export default function ContactEnquiries() {
           )}
         </div>
 
-        {/* ── Pagination ────────────────────────────────────────────────────────── */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-gray-50">
             <p className="text-sm text-gray-500">
@@ -184,13 +255,13 @@ export default function ContactEnquiries() {
             </p>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft size={16} />
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
@@ -200,7 +271,7 @@ export default function ContactEnquiries() {
                 </button>
               ))}
               <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
@@ -211,7 +282,6 @@ export default function ContactEnquiries() {
         )}
       </div>
 
-      {/* ── View Modal ────────────────────────────────────────────────────────── */}
       {isViewModalOpen && viewingEnquiry && (
         <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -223,63 +293,52 @@ export default function ContactEnquiries() {
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">First Name</p>
-                  <p className="text-sm text-gray-800">{viewingEnquiry.firstName}</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Name</p>
+                  <p className="text-sm text-gray-800">{viewingEnquiry.firstName} {viewingEnquiry.lastName}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Last Name</p>
-                  <p className="text-sm text-gray-800">{viewingEnquiry.lastName}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Company</p>
-                  <p className="text-sm text-gray-800">{viewingEnquiry.company || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Email Address</p>
-                  <a href={`mailto:${viewingEnquiry.emailAddress}`} className="text-sm text-blue-500 hover:underline">{viewingEnquiry.emailAddress}</a>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">I Am A</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Status</p>
                   <span className="inline-block px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-gray-100 text-gray-600">
-                    {viewingEnquiry.userType}
+                    {viewingEnquiry.status || 'new'}
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Submission Date</p>
-                  <p className="text-sm text-gray-800">{viewingEnquiry.submittedDate}</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Email</p>
+                  <a href={`mailto:${viewingEnquiry.emailAddress}`} className="text-sm text-blue-500 hover:underline">{viewingEnquiry.emailAddress}</a>
                 </div>
-              </div>
-
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Subject</p>
-                <p className="text-sm font-medium text-gray-900 mb-4">{viewingEnquiry.subject}</p>
-
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Message</p>
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{viewingEnquiry.message}</p>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Contact Number</p>
+                  <p className="text-sm text-gray-800">
+                    {viewingEnquiry.countryCode} {viewingEnquiry.contactNumber}
+                  </p>
                 </div>
-              </div>
-
-              {viewingEnquiry.attachment && (
-                <div className="border-t border-gray-100 pt-4">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Attachment</p>
-                  <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-white w-max pr-6">
-                    <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
-                      <FileText size={20} className="text-orange-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{viewingEnquiry.attachment}</p>
-                      <button className="text-xs flex items-center gap-1 text-blue-500 hover:text-blue-700 transition-colors mt-0.5">
-                        <Download size={12} /> Download File
-                      </button>
-                    </div>
+                <div className="col-span-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Message</p>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{viewingEnquiry.message}</p>
                   </div>
                 </div>
-              )}
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Submitted</p>
+                  <p className="text-sm text-gray-800">{viewingEnquiry.submittedDate}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Updated</p>
+                  <p className="text-sm text-gray-800">
+                    {viewingEnquiry.updatedAt
+                      ? new Date(viewingEnquiry.updatedAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : '—'}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
-              <button onClick={() => setIsViewModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              <button onClick={() => setIsViewModalOpen(false)} className="px-4 py-2 text-sm font-medium text-white bg-orange-500  rounded-lg hover:bg-orange-600 transition-colors">
                 Close
               </button>
             </div>
@@ -287,7 +346,6 @@ export default function ContactEnquiries() {
         </div>
       )}
 
-      {/* ── Delete Confirmation ───────────────────────────────────────────────── */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
