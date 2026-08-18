@@ -1,53 +1,72 @@
 const API_BASE = '/api';
 
+const handleResponse = async (response) => {
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    console.error('Partner Trust API Error:', response.status, data);
+    const message = data?.message || 'Partner Trust request failed';
+    throw new Error(message);
+  }
+
+  return data;
+};
+
+const getRequestOptions = (method, data) => {
+  const isFormData = data instanceof FormData;
+
+  return {
+    method,
+    credentials: 'include',
+    headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+    body: isFormData ? data : JSON.stringify(data),
+  };
+};
+
 export const getAllPartnerTrust = async () => {
   try {
-    const response = await fetch(`${API_BASE}/admin/partner-trust`);
-    return response.data?.data ?? response.data;
+    const response = await fetch(`${API_BASE}/admin/partner-trust`, {
+      credentials: 'include',
+    });
+    const data = await handleResponse(response);
+    return data?.data ?? data;
   } catch (error) {
-    console.error('Error fetching partner trust records:', error.response?.data || error.message);
+    console.error('Error fetching partner trust records:', error.message);
     throw error;
   }
 };
 
 export const getPartnerTrustById = async (id) => {
   try {
-    const response = await fetch(`${API_BASE}/admin/partner-trust/${id}`);
-    return response.data?.data ?? response.data;
+    const response = await fetch(`${API_BASE}/admin/partner-trust/${id}`, {
+      credentials: 'include',
+    });
+    const data = await handleResponse(response);
+    return data?.data ?? data;
   } catch (error) {
-    console.error('Error fetching partner trust record:', error.response?.data || error.message);
+    console.error('Error fetching partner trust record:', error.message);
     throw error;
   }
 };
 
 export const createPartnerTrust = async (data) => {
   try {
-    const response = await fetch(`${API_BASE}/admin/partner-trust`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    return response.data;
+    console.log('Partner Trust Payload:', data);
+    const response = await fetch(`${API_BASE}/admin/partner-trust`, getRequestOptions('POST', data));
+    return await handleResponse(response);
   } catch (error) {
-    console.error('Error creating partner trust:', error.response?.data || error.message);
+    console.error('Create Partner Trust Error:', error.message);
     throw error;
   }
 };
 
 export const updatePartnerTrust = async (id, data) => {
   try {
-    const response = await fetch(`${API_BASE}/admin/partner-trust/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    return response.data;
+    console.log('Partner Trust Payload:', data);
+    const response = await fetch(`${API_BASE}/admin/partner-trust/${id}`, getRequestOptions('PUT', data));
+    return await handleResponse(response);
   } catch (error) {
-    console.error('Error updating partner trust:', error.response?.data || error.message);
+    console.error('Update Partner Trust Error:', error.message);
     throw error;
   }
 };
@@ -56,10 +75,11 @@ export const deletePartnerTrust = async (id) => {
   try {
     const response = await fetch(`${API_BASE}/admin/partner-trust/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
-    return response.data;
+    return await handleResponse(response);
   } catch (error) {
-    console.error('Error deleting partner trust:', error.response?.data || error.message);
+    console.error('Delete Partner Trust Error:', error.message);
     throw error;
   }
 };

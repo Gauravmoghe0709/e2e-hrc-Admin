@@ -20,6 +20,7 @@ import {
 } from '../services/becomePartner/becomePartnerService';
 import RecruitmentPartners from "../components/becomePartner/RecruitmentPartners";
 import TrustTransparency from "../components/becomePartner/TrustTransparency";
+import NetworkMapCard from "../components/becomePartner/NetworkMapCard";
 
 // ─── Empty form state ──────────────────────────────────────────────────────────
 const EMPTY_FORM = {
@@ -541,6 +542,7 @@ export default function BecomePartnerManagement() {
       <div>
         <RecruitmentPartners />
         <TrustTransparency />
+        <NetworkMapCard />
       </div>
     </div>
 

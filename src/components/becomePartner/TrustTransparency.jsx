@@ -58,22 +58,35 @@ export default function TrustTransparency() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const hydrateFormFromRecord = (record) => {
+    const safeRecord = record || {};
+
+    setEditingId(safeRecord._id || null);
+    setFormData({
+      title: safeRecord.title || '',
+      description: safeRecord.description || '',
+      features: normalizeFeatures(safeRecord.features),
+      isActive: safeRecord.isActive !== undefined ? Boolean(safeRecord.isActive) : true,
+    });
+    setImageFile(null);
+    setImagePreview(safeRecord.image || '');
+    setErrors({});
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const loadRecord = async () => {
     setIsLoading(true);
     try {
       const response = await getAllPartnerTrust();
-      const records = Array.isArray(response?.data) ? response.data : [];
+      const records = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response)
+          ? response
+          : [];
 
       if (records.length > 0) {
-        const record = records[0];
-        setEditingId(record._id);
-        setFormData({
-          title: record.title || '',
-          description: record.description || '',
-          features: normalizeFeatures(record.features),
-          isActive: record.isActive !== undefined ? record.isActive : true,
-        });
-        setImagePreview(record.image || '');
+        hydrateFormFromRecord(records[0]);
       } else {
         resetForm();
       }
@@ -185,6 +198,17 @@ export default function TrustTransparency() {
         payload.append('image', imageFile);
       }
 
+      console.log('Partner Trust Payload:', {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        image: imageFile ? imageFile.name : imagePreview || null,
+        features: formData.features.map((feature) => ({
+          title: feature.title.trim(),
+          description: feature.description.trim(),
+        })),
+        isActive: formData.isActive,
+      });
+
       let response;
 
       if (editingId) {
@@ -199,8 +223,13 @@ export default function TrustTransparency() {
         }
       }
 
-      setImageFile(null);
-      await loadRecord();
+      const savedRecord = response?.data ?? response ?? null;
+
+      if (savedRecord && (savedRecord._id || savedRecord.title || savedRecord.description || savedRecord.features)) {
+        hydrateFormFromRecord(savedRecord);
+      } else {
+        await loadRecord();
+      }
     } catch (error) {
       toast.error(error.message || 'Failed to save Trust & Transparency.');
     } finally {
