@@ -21,6 +21,7 @@ import {
   deleteBlog,
   updateBlogStatus,
 } from '../services/blog/blogService';
+import BlogCTA from '../components/blog/BlogCTA';
 
 const EMPTY_FORM = {
   blogHeading: '',
@@ -1017,6 +1018,7 @@ export default function BlogManagement() {
         </div>
       )}
 
+
       {/* Blogs List */}
       <div className="space-y-4 px-4">
         {blogs.length === 0 ? (
@@ -1238,6 +1240,7 @@ export default function BlogManagement() {
           </div>
         </div>
       )}
+       <BlogCTA />
     </div>
   );
 }
