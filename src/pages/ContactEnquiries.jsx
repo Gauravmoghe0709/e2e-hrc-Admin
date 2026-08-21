@@ -7,7 +7,7 @@ import {
   updatePartnershipEnquiry,
   deletePartnershipEnquiry,
 } from '../services/becomePartner/partnershipEnquiryService';
-
+import ContactEnquiriesSection from '../components/Contactus/ContactEnquiriesSection';
 const ITEMS_PER_PAGE = 8;
 
 const emitContactCountUpdate = (count) => {
@@ -202,7 +202,7 @@ export default function ContactEnquiries() {
           ) : paginated.length === 0 ? (
             <div className="p-16 text-center">
               <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4">
-                <Inbox size={28} className="text-orange-300" />
+                 <Inbox size={28} className="text-orange-300" />
               </div>
               <h3 className="text-lg font-semibold text-gray-700 mb-2">
                 {enquiries.length === 0 ? 'No enquiries yet' : 'No results found'}
@@ -363,6 +363,16 @@ export default function ContactEnquiries() {
           </div>
         </div>
       )}
+      <div className="max-w-6xl mx-auto  relative md:mt-15">
+      <Toaster position="top-right" />
+      {/* Contact Enquiries Section */}
+      <ContactEnquiriesSection />
+      </div>
     </div>
   );
 }
+
+
+
+
+

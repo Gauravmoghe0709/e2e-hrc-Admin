@@ -1047,12 +1047,15 @@ export default function BlogManagement() {
                     <h3 className="text-base font-semibold text-gray-900 line-clamp-2">{blog.blogHeading}</h3>
                     <div className="flex items-center gap-2 ml-2">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${blog.isActive
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          blog.status === 'Published'
                             ? 'bg-green-100 text-green-700'
+                            : blog.status === 'Scheduled'
+                            ? 'bg-blue-100 text-blue-700'
                             : 'bg-gray-100 text-gray-700'
-                          }`}
+                        }`}
                       >
-                        {blog.isActive ? 'Active' : 'Inactive'}
+                        {blog.status || 'Draft'}
                       </span>
                     </div>
                   </div>

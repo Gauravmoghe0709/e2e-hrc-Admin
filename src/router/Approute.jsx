@@ -7,6 +7,7 @@ import BlogsLayout from "../pages/BlogsLayout";
 import BlogServices from "../pages/BlogServices";
 import BlogManagement from "../pages/BlogManagement";
 import ContactEnquiries from "../pages/ContactEnquiries";
+import ContactUs from "../pages/ContactUs";
 import EmployerManagement from "../pages/employer";
 import EmployeeManagement from "../pages/EmployeeManagement";
 import BecomePartnerManagement from "../pages/becomepartner";
@@ -66,7 +67,8 @@ const Approute = () => {
                 </Route>
 
                 {/* ── Contact nested routes ───────────────────────────────── */}
-                    <Route path="contact/enquiries" element={<ContactEnquiries />} />
+                <Route path="contact-us" element={<ContactUs />} />
+                <Route path="contact/enquiries" element={<ContactEnquiries />} />
             
             </Route>
         </Routes>

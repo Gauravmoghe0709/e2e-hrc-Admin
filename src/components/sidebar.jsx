@@ -33,6 +33,7 @@ const sidebarItems = [
       { title: "Blog Management", path: "/admin/blogs/management" },
     ],
   },
+  { title: "Contact Us", icon: MessageSquareText, path: "/admin/contact-us" },
   {
     title: "Contact Enquiries",
     icon: MessageSquareText,
