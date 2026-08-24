@@ -16,6 +16,10 @@ import {
   Handshake,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { getAllEmployees } from "../services/home/employeeApi";
+import { getAllEmployers } from "../services/home/employerApi";
+import { getAllPartnershipEnquiries } from "../services/becomePartner/partnershipEnquiryService";
+import { getAllContactEnquiries } from "../services/contactUs/contactEnquiryService";
 
 const sidebarItems = [
   { title: "Home", icon: Home, path: "/admin/home" },
@@ -50,23 +54,59 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     const saved = localStorage.getItem('contactEnquiriesNewCount');
     return Number(saved || 0) > 0;
   });
+  const [hasNewPartnershipEnquiries, setHasNewPartnershipEnquiries] = useState(() => Number(localStorage.getItem('partnershipEnquiriesNewCount') || 0) > 0);
+  const [hasNewEmployerEnquiries, setHasNewEmployerEnquiries] = useState(() => Number(localStorage.getItem('employerEnquiriesNewCount') || 0) > 0);
+  const [hasNewEmployeeEnquiries, setHasNewEmployeeEnquiries] = useState(() => Number(localStorage.getItem('employeeEnquiriesNewCount') || 0) > 0);
 
   useEffect(() => {
+    const loadEnquiryNotifications = async () => {
+      try {
+        const [partnerships, contacts, employers, employees] = await Promise.all([
+          getAllPartnershipEnquiries(),
+          getAllContactEnquiries(),
+          getAllEmployers(),
+          getAllEmployees(),
+        ]);
+        const hasNew = (items) => Array.isArray(items) && items.some((item) => item.status === 'new');
+        setHasNewPartnershipEnquiries(hasNew(partnerships));
+        setHasNewContactEnquiries(hasNew(contacts));
+        setHasNewEmployerEnquiries(employers.some((item) => (item.status || 'new') === 'new'));
+        setHasNewEmployeeEnquiries(employees.some((item) => (item.status || 'new') === 'new'));
+      } catch (error) {
+        console.error('Failed to load enquiry notifications:', error);
+      }
+    };
+
     const updateNotification = (event) => {
       const count = Number(event?.detail?.count || 0);
       setHasNewContactEnquiries(count > 0);
     };
 
+    const updatePartnershipNotification = (event) => setHasNewPartnershipEnquiries(Number(event?.detail?.count || 0) > 0);
+
+    const updateEmployerNotification = (event) => setHasNewEmployerEnquiries(Number(event?.detail?.count || 0) > 0);
+    const updateEmployeeNotification = (event) => setHasNewEmployeeEnquiries(Number(event?.detail?.count || 0) > 0);
+
     const handleStorage = () => {
       const count = Number(localStorage.getItem('contactEnquiriesNewCount') || 0);
       setHasNewContactEnquiries(count > 0);
+      setHasNewPartnershipEnquiries(Number(localStorage.getItem('partnershipEnquiriesNewCount') || 0) > 0);
+      setHasNewEmployerEnquiries(Number(localStorage.getItem('employerEnquiriesNewCount') || 0) > 0);
+      setHasNewEmployeeEnquiries(Number(localStorage.getItem('employeeEnquiriesNewCount') || 0) > 0);
     };
 
+    loadEnquiryNotifications();
     window.addEventListener('contact-enquiries-count-changed', updateNotification);
+    window.addEventListener('partnership-enquiries-count-changed', updatePartnershipNotification);
+    window.addEventListener('employer-enquiries-count-changed', updateEmployerNotification);
+    window.addEventListener('employee-enquiries-count-changed', updateEmployeeNotification);
     window.addEventListener('storage', handleStorage);
 
     return () => {
       window.removeEventListener('contact-enquiries-count-changed', updateNotification);
+      window.removeEventListener('partnership-enquiries-count-changed', updatePartnershipNotification);
+      window.removeEventListener('employer-enquiries-count-changed', updateEmployerNotification);
+      window.removeEventListener('employee-enquiries-count-changed', updateEmployeeNotification);
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
@@ -277,8 +317,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
                     {/* Label */}
                     <span className="flex-1 truncate">{item.title}</span>
-                    {item.title === "Contact Enquiries" && hasNewContactEnquiries && (
-                      <span className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-sm ring-2 ring-white flex-shrink-0" />
+                    {item.title === "Contact Enquiries" && (hasNewContactEnquiries || hasNewPartnershipEnquiries || hasNewEmployerEnquiries || hasNewEmployeeEnquiries) && (
+                      <span className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-sm ring-2 ring-white flex-shrink-0" title="New enquiry" />
                     )}
 
                     {/* Trailing chevron */}

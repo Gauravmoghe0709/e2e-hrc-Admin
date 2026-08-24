@@ -8,11 +8,13 @@ import {
   deletePartnershipEnquiry,
 } from '../services/becomePartner/partnershipEnquiryService';
 import ContactEnquiriesSection from '../components/Contactus/ContactEnquiriesSection';
+import EmployerEnquiries from '../components/home/EmployerEnquiries';
+import EmployeeEnquiries from '../components/home/EmployeeEnquiries';
 const ITEMS_PER_PAGE = 8;
 
 const emitContactCountUpdate = (count) => {
-  localStorage.setItem('contactEnquiriesNewCount', String(count));
-  window.dispatchEvent(new CustomEvent('contact-enquiries-count-changed', { detail: { count } }));
+  localStorage.setItem('partnershipEnquiriesNewCount', String(count));
+  window.dispatchEvent(new CustomEvent('partnership-enquiries-count-changed', { detail: { count } }));
 };
 
 const normalizeEnquiry = (enquiry) => {
@@ -30,7 +32,7 @@ const normalizeEnquiry = (enquiry) => {
     userType: enquiry?.userType || 'Partner',
     subject: 'Partnership Inquiry',
     message: enquiry?.message || '',
-    attachment: '',
+    attachment: enquiry?.attachment || enquiry?.attachment_url || '',
     submittedDate: enquiry?.createdAt
       ? new Date(enquiry.createdAt).toLocaleDateString('en-GB', {
           day: '2-digit',
@@ -159,6 +161,32 @@ export default function ContactEnquiries() {
     }
   };
 
+  const getAttachmentUrl = (attachment) => typeof attachment === 'string'
+    ? attachment
+    : attachment?.url || attachment?.path || '';
+
+  const getAttachmentName = (attachment) => {
+    if (typeof attachment === 'object') return attachment.originalName || attachment.filename || 'attachment';
+    return attachment?.split('/').pop()?.split('?')[0] || 'attachment';
+  };
+
+  const downloadAttachment = async (attachment) => {
+    try {
+      const response = await fetch(getAttachmentUrl(attachment));
+      if (!response.ok) throw new Error('Failed to download file');
+      const blobUrl = window.URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = getAttachmentName(attachment);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      toast.error('Failed to download file');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto pb-20 relative md:mt-15 mt-5">
       <Toaster position="top-right" />
@@ -284,47 +312,47 @@ export default function ContactEnquiries() {
 
       {isViewModalOpen && viewingEnquiry && (
         <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-              <h3 className="text-lg font-bold text-gray-800">Enquiry Details</h3>
-              <button onClick={() => setIsViewModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between flex-shrink-0 bg-gray-50">
+              <h3 className="text-xl font-bold tracking-tight text-gray-900">Enquiry Details</h3>
+              <button onClick={() => setIsViewModalOpen(false)} aria-label="Close enquiry details" className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"><X size={20} /></button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Name</p>
-                  <p className="text-sm text-gray-800">{viewingEnquiry.firstName} {viewingEnquiry.lastName}</p>
+            <div className="p-6 sm:p-7 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Name</p>
+                  <p className="text-base font-semibold text-gray-900 mt-2 wrap-break-word">{viewingEnquiry.firstName} {viewingEnquiry.lastName}</p>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Status</p>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</p>
                   <span className="inline-block px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-gray-100 text-gray-600">
                     {viewingEnquiry.status || 'new'}
                   </span>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Email</p>
-                  <a href={`mailto:${viewingEnquiry.emailAddress}`} className="text-sm text-blue-500 hover:underline">{viewingEnquiry.emailAddress}</a>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Email</p>
+                  <a href={`mailto:${viewingEnquiry.emailAddress}`} className="text-base font-semibold text-blue-600 hover:underline mt-2 wrap-break-word inline-block">{viewingEnquiry.emailAddress}</a>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Contact Number</p>
-                  <p className="text-sm text-gray-800">
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Contact Number</p>
+                  <p className="text-base font-semibold text-gray-900 mt-2 wrap-break-word">
                     {viewingEnquiry.countryCode} {viewingEnquiry.contactNumber}
                   </p>
                 </div>
-                <div className="col-span-2">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Message</p>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{viewingEnquiry.message}</p>
+                <div className="sm:col-span-2">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Message</p>
+                  <div className="bg-gray-50 p-5 rounded-xl border border-gray-200 mt-2 max-h-60 overflow-y-auto">
+                    <p className="text-base text-gray-700 whitespace-pre-wrap wrap-break-word leading-relaxed">{viewingEnquiry.message || '—'}</p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Submitted</p>
-                  <p className="text-sm text-gray-800">{viewingEnquiry.submittedDate}</p>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Submitted</p>
+                  <p className="text-base font-semibold text-gray-900 mt-2">{viewingEnquiry.submittedDate}</p>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Updated</p>
-                  <p className="text-sm text-gray-800">
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Updated</p>
+                  <p className="text-base font-semibold text-gray-900 mt-2">
                     {viewingEnquiry.updatedAt
                       ? new Date(viewingEnquiry.updatedAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
@@ -333,6 +361,18 @@ export default function ContactEnquiries() {
                         })
                       : '—'}
                   </p>
+                </div>
+                <div className="sm:col-span-2 rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Attachment</p>
+                  {getAttachmentUrl(viewingEnquiry.attachment) ? (
+                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <span className="flex-1 min-w-0 truncate text-base font-semibold text-gray-900">{getAttachmentName(viewingEnquiry.attachment)}</span>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => window.open(getAttachmentUrl(viewingEnquiry.attachment), '_blank', 'noopener,noreferrer')} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"><Eye size={14} /> View</button>
+                        <button type="button" onClick={() => downloadAttachment(viewingEnquiry.attachment)} className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200"><Download size={14} /> Download</button>
+                      </div>
+                    </div>
+                  ) : <p className="mt-2 text-sm italic text-gray-500">No attachment</p>}
                 </div>
               </div>
             </div>
@@ -368,6 +408,13 @@ export default function ContactEnquiries() {
       {/* Contact Enquiries Section */}
       <ContactEnquiriesSection />
       </div>
+       <div className="max-w-6xl mx-auto  relative md:mt-10">
+      <Toaster position="top-right" />
+      {/* Contact Enquiries Section */}
+        <EmployerEnquiries />
+      <EmployeeEnquiries />
+      </div>
+      
     </div>
   );
 }

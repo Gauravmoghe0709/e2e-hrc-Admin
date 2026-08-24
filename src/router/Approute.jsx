@@ -13,7 +13,7 @@ import EmployeeManagement from "../pages/EmployeeManagement";
 import BecomePartnerManagement from "../pages/becomepartner";
 import FooterPage from "../pages/Footer";
 import WorkforceSolutionManagement from "../pages/WorkforceSolutionManagement";
-import SeoManagement from "../pages/SeoManagement";
+import SeoStaticManagement from "../pages/SeoStaticManagement";
 import Sidebar from "../components/sidebar";
 import Topbar from "../components/Topbar";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -56,9 +56,8 @@ const Approute = () => {
                 <Route path="workforce-solution" element={<WorkforceSolutionManagement />} />
                 <Route path="employee" element={<EmployeeManagement />} />
                 <Route path="become-partner" element={<BecomePartnerManagement />} />
-                <Route path="seo" element={<SeoManagement />} />
+                <Route path="seo" element={<SeoStaticManagement />} />
                 <Route path="footer" element={<FooterPage />} />
-
                 {/* ── Blogs nested routes ─────────────────────────────────── */}
                 <Route path="blogs" element={<BlogsLayout />}>
                     <Route index element={<Navigate to="management" replace />} />

@@ -24,6 +24,7 @@ export default function HomeManagement() {
     buttonLink: '',
     heroImage: '',
     heroImageFile: null,
+    stats: [],
     isActive: true,
   });
 
@@ -75,6 +76,8 @@ export default function HomeManagement() {
         buttonText: heroData.buttonText,
         buttonLink: heroData.buttonLink,
         heroImage: currentHeroImage,
+        // Omit stats when unavailable so an unrelated Hero save cannot clear existing records.
+        ...(Array.isArray(heroData.stats) ? { stats: heroData.stats } : {}),
         isActive: heroData.isActive,
       });
 
@@ -123,14 +126,14 @@ export default function HomeManagement() {
 
         {/* Why Choose Us — fully self-contained, backed by ApproachCards API */}
         <WhyChooseUsSection />
+        
+        {/* Trusted By — fully self-contained, section + logos management */}
+        <TrustedBySection />
 
-      
-
+    
         {/* Contact CTA — fully self-contained, has its own save button */}
         <ContactCTASection />
 
-        {/* Trusted By — fully self-contained, section + logos management */}
-        <TrustedBySection />
       </div>
     </div>
   );

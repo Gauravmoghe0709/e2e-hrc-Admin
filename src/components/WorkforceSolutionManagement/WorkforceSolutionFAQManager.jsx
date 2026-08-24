@@ -1,18 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, X, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Loader2,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import {
   getAdminWorkforceSolutionFAQs,
   createWorkforceSolutionFAQ,
   updateWorkforceSolutionFAQ,
   deleteWorkforceSolutionFAQ,
-} from '../../services/workforceSolution/workforceSolutionFAQService';
+} from "../../services/workforceSolution/workforceSolutionFAQService";
 
-const EMPTY_FAQ = { question: '', answer: '', order: 0, isActive: true };
+const EMPTY_FAQ = { question: "", answer: "", order: 0, isActive: true };
 
 const Toggle = ({ checked, onChange, name }) => (
   <label className="relative inline-flex items-center cursor-pointer">
-    <input type="checkbox" name={name} checked={checked} onChange={onChange} className="sr-only peer" />
+    <input
+      type="checkbox"
+      name={name}
+      checked={checked}
+      onChange={onChange}
+      className="sr-only peer"
+    />
     <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
   </label>
 );
@@ -43,7 +57,7 @@ export default function WorkforceSolutionFAQManager() {
       const sortedFAQs = items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       setFaqs(sortedFAQs);
     } catch (error) {
-      toast.error(error.message || 'Failed to load FAQs.');
+      toast.error(error.message || "Failed to load FAQs.");
     } finally {
       setIsLoading(false);
     }
@@ -51,15 +65,19 @@ export default function WorkforceSolutionFAQManager() {
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validate = () => {
     const errs = {};
-    if (!formData.question?.trim()) errs.question = 'Question is required.';
-    if (!formData.answer?.trim()) errs.answer = 'Answer is required.';
-    if (formData.order === '' || isNaN(formData.order)) errs.order = 'Order must be numeric.';
+    if (!formData.question?.trim()) errs.question = "Question is required.";
+    if (!formData.answer?.trim()) errs.answer = "Answer is required.";
+    if (formData.order === "" || isNaN(formData.order))
+      errs.order = "Order must be numeric.";
     return errs;
   };
 
@@ -73,8 +91,8 @@ export default function WorkforceSolutionFAQManager() {
   const openEditModal = (faq) => {
     setEditingId(faq._id);
     setFormData({
-      question: faq.question || '',
-      answer: faq.answer || '',
+      question: faq.question || "",
+      answer: faq.answer || "",
       order: faq.order ?? 0,
       isActive: faq.isActive ?? true,
     });
@@ -104,15 +122,15 @@ export default function WorkforceSolutionFAQManager() {
 
       if (editingId) {
         await updateWorkforceSolutionFAQ(editingId, payload);
-        toast.success('FAQ updated successfully!');
+        toast.success("FAQ updated successfully!");
       } else {
         await createWorkforceSolutionFAQ(payload);
-        toast.success('FAQ created successfully!');
+        toast.success("FAQ created successfully!");
       }
       setIsModalOpen(false);
       fetchFAQs();
     } catch (error) {
-      toast.error(error.message || 'Failed to save FAQ.');
+      toast.error(error.message || "Failed to save FAQ.");
     } finally {
       setIsSaving(false);
     }
@@ -123,11 +141,11 @@ export default function WorkforceSolutionFAQManager() {
     setIsDeleting(true);
     try {
       await deleteWorkforceSolutionFAQ(deletingId);
-      toast.success('FAQ deleted successfully!');
+      toast.success("FAQ deleted successfully!");
       setIsDeleteModalOpen(false);
       fetchFAQs();
     } catch (error) {
-      toast.error(error.message || 'Failed to delete FAQ.');
+      toast.error(error.message || "Failed to delete FAQ.");
     } finally {
       setIsDeleting(false);
     }
@@ -137,7 +155,9 @@ export default function WorkforceSolutionFAQManager() {
     <div>
       <div className="mb-4">
         <h3 className="text-xl font-bold text-gray-900">FAQs</h3>
-        <p className="text-sm text-gray-500 mt-1">Manage the frequently asked questions displayed in the FAQ section.</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Manage the frequently asked questions displayed in the FAQ section.
+        </p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -157,13 +177,29 @@ export default function WorkforceSolutionFAQManager() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
+
+                if (faqs.length >= 6) {
+                  toast.error("Maximum 6 FAQs are allowed.");
+                  return;
+                }
+
                 openAddModal();
               }}
-              className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+              disabled={faqs.length >= 6}
+              className={`flex items-center gap-1 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                faqs.length >= 6
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-orange-500 hover:bg-orange-600"
+              }`}
             >
-              <Plus size={16} /> Add FAQ
+              <Plus size={16} />
+              {faqs.length >= 6 ? "Maximum 6 FAQs" : "Add FAQ"}
             </button>
-            {isExpanded ? <ChevronUp size={20} className="text-gray-500" /> : <ChevronDown size={20} className="text-gray-500" />}
+            {isExpanded ? (
+              <ChevronUp size={20} className="text-gray-500" />
+            ) : (
+              <ChevronDown size={20} className="text-gray-500" />
+            )}
           </div>
         </div>
 
@@ -179,34 +215,51 @@ export default function WorkforceSolutionFAQManager() {
                   <Plus size={32} className="text-orange-300" />
                 </div>
                 <p className="text-gray-600 font-semibold">No FAQs yet</p>
-                <p className="text-sm text-gray-500 mt-1">Create your first FAQ to get started.</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Create your first FAQ to get started.
+                </p>
               </div>
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-white border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500">
                     <th className="p-4 font-medium">Question</th>
-                    <th className="p-4 font-medium hidden lg:table-cell">Answer</th>
-                    <th className="p-4 font-medium hidden md:table-cell">Order</th>
+                    <th className="p-4 font-medium hidden lg:table-cell">
+                      Answer
+                    </th>
+                    <th className="p-4 font-medium hidden md:table-cell">
+                      Order
+                    </th>
                     <th className="p-4 font-medium">Status</th>
                     <th className="p-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {faqs.map((faq) => (
-                    <tr key={faq._id} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={faq._id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
                       <td className="p-4">
-                        <p className="font-semibold text-gray-800 text-sm max-w-md truncate">{faq.question}</p>
+                        <p className="font-semibold text-gray-800 text-sm max-w-md truncate">
+                          {faq.question}
+                        </p>
                       </td>
-                      <td className="p-4 hidden lg:table-cell text-sm text-gray-500 max-w-sm truncate">{faq.answer}</td>
-                      <td className="p-4 hidden md:table-cell text-sm text-gray-500">{faq.order}</td>
+                      <td className="p-4 hidden lg:table-cell text-sm text-gray-500 max-w-sm truncate">
+                        {faq.answer}
+                      </td>
+                      <td className="p-4 hidden md:table-cell text-sm text-gray-500">
+                        {faq.order}
+                      </td>
                       <td className="p-4">
                         <span
                           className={`px-2 py-1 text-[10px] font-bold uppercase rounded-full ${
-                            faq.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                            faq.isActive
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-600"
                           }`}
                         >
-                          {faq.isActive ? 'Active' : 'Inactive'}
+                          {faq.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
                       <td className="p-4 text-right space-x-2 whitespace-nowrap">
@@ -239,7 +292,9 @@ export default function WorkforceSolutionFAQManager() {
         <div className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800">{editingId ? 'Edit FAQ' : 'Add New FAQ'}</h3>
+              <h3 className="text-lg font-bold text-gray-800">
+                {editingId ? "Edit FAQ" : "Add New FAQ"}
+              </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -259,11 +314,13 @@ export default function WorkforceSolutionFAQManager() {
                   onChange={handleFormChange}
                   rows={2}
                   className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none ${
-                    errors.question ? 'border-red-400' : 'border-gray-200'
+                    errors.question ? "border-red-400" : "border-gray-200"
                   }`}
                   placeholder="Enter question..."
                 />
-                {errors.question && <p className="text-xs text-red-500 mt-1">{errors.question}</p>}
+                {errors.question && (
+                  <p className="text-xs text-red-500 mt-1">{errors.question}</p>
+                )}
               </div>
 
               <div>
@@ -276,11 +333,13 @@ export default function WorkforceSolutionFAQManager() {
                   onChange={handleFormChange}
                   rows={4}
                   className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-none ${
-                    errors.answer ? 'border-red-400' : 'border-gray-200'
+                    errors.answer ? "border-red-400" : "border-gray-200"
                   }`}
                   placeholder="Enter answer..."
                 />
-                {errors.answer && <p className="text-xs text-red-500 mt-1">{errors.answer}</p>}
+                {errors.answer && (
+                  <p className="text-xs text-red-500 mt-1">{errors.answer}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -294,22 +353,28 @@ export default function WorkforceSolutionFAQManager() {
                     value={formData.order}
                     onChange={handleFormChange}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors ${
-                      errors.order ? 'border-red-400' : 'border-gray-200'
+                      errors.order ? "border-red-400" : "border-gray-200"
                     }`}
                     placeholder="0"
                   />
-                  {errors.order && <p className="text-xs text-red-500 mt-1">{errors.order}</p>}
+                  {errors.order && (
+                    <p className="text-xs text-red-500 mt-1">{errors.order}</p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
                   <div className="mt-2 flex items-center gap-2">
                     <Toggle
                       checked={formData.isActive}
                       onChange={handleFormChange}
                       name="isActive"
                     />
-                    <span className="text-sm text-gray-600">{formData.isActive ? 'Active' : 'Inactive'}</span>
+                    <span className="text-sm text-gray-600">
+                      {formData.isActive ? "Active" : "Inactive"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -328,7 +393,13 @@ export default function WorkforceSolutionFAQManager() {
                 disabled={isSaving}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-lg hover:bg-orange-600 transition-colors shadow-sm disabled:bg-orange-300"
               >
-                {isSaving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : `${editingId ? 'Update' : 'Create'} FAQ`}
+                {isSaving ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Saving...
+                  </>
+                ) : (
+                  `${editingId ? "Update" : "Create"} FAQ`
+                )}
               </button>
             </div>
           </div>
@@ -342,8 +413,12 @@ export default function WorkforceSolutionFAQManager() {
             <div className="w-12 h-12 rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4">
               <Trash2 size={24} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete FAQ?</h3>
-            <p className="text-sm text-gray-500 mb-6">This action cannot be undone.</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Delete FAQ?
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              This action cannot be undone.
+            </p>
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => {
@@ -360,7 +435,13 @@ export default function WorkforceSolutionFAQManager() {
                 disabled={isDeleting}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 border border-transparent rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:bg-red-300"
               >
-                {isDeleting ? <><Loader2 size={14} className="animate-spin" /> Deleting...</> : 'Yes, Delete'}
+                {isDeleting ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Deleting...
+                  </>
+                ) : (
+                  "Yes, Delete"
+                )}
               </button>
             </div>
           </div>
