@@ -83,7 +83,7 @@ export default function EmployerSection() {
   };
 
   const saveCard = async () => {
-      if (!formData.badgeText.trim() || !formData.titleLine.trim() || !formData.highlightedText.trim() || !formData.description.trim() || !formData.buttonText.trim() || !formData.buttonLink.trim()) {
+      if (!formData.badgeText.trim() || !formData.titleLine.trim() || !formData.description.trim() || !formData.buttonText.trim() || !formData.buttonLink.trim()) {
         toast.error('Badge text, title line, highlighted text, description, button text and button link are required');
         return;
       }

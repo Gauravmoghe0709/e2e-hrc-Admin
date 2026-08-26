@@ -18,6 +18,7 @@ export default function HomeManagement() {
   const [isHeroLoading, setIsHeroLoading] = useState(true);
   const [heroData, setHeroData] = useState({
     title: '',
+    highlightedText: '',
     subtitle: '',
     description: '',
     buttonText: '',
@@ -71,6 +72,7 @@ export default function HomeManagement() {
       // 2. Save text fields
       await updateHeroData({
         title: heroData.title,
+        highlightedText: heroData.highlightedText,
         subtitle: heroData.subtitle,
         description: heroData.description,
         buttonText: heroData.buttonText,
@@ -114,6 +116,9 @@ export default function HomeManagement() {
           {/* Employer Section — fully self-contained, backed by employer section API */}
         <EmployerSection />
 
+        {/* Services — fully self-contained, loads & saves its own data */}
+        <ServicesSection />
+
 
         {/* How We Work — fully self-contained, backed by How We Work API */}
         <HowWeWorkSection />
@@ -121,8 +126,7 @@ export default function HomeManagement() {
         {/* Location Cards — fully self-contained, backed by location cards API */}
         <LocationCardsSection />
 
-        {/* Services — fully self-contained, loads & saves its own data */}
-        <ServicesSection />
+        
 
         {/* Why Choose Us — fully self-contained, backed by ApproachCards API */}
         <WhyChooseUsSection />
