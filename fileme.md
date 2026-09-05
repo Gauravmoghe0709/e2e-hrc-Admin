@@ -1,11 +1,14 @@
-import React, { useState, useRef } from 'react';
+/* import React, { useState, useRef } from 'react';
 import { ChevronDown, ChevronUp, Image as ImageIcon, X, Upload, Save, Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
+import { uploadHeroImage } from '../../services/heroImageService';
 
 export default function HeroSection({ data, onChange, onSave, isSaving, isLoading }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [editingIndex, setEditingIndex] = useState(null);
   const [statDraft, setStatDraft] = useState({ label: '', value: '' });
   const [statError, setStatError] = useState('');
+  const [imageUploadLoading, setImageUploadLoading] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState('');
   const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
@@ -16,22 +19,56 @@ export default function HeroSection({ data, onChange, onSave, isSaving, isLoadin
     });
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB');
-      return;
-    }
-    const imageUrl = URL.createObjectURL(file);
-    onChange('hero', { ...data, heroImage: imageUrl, heroImageFile: file });
+
+    // Reset error
+    setImageUploadError('');
+
+    // Create local preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    onChange('hero', {
+      ...data,
+      heroImage: previewUrl,
+      heroImageFile: file,
+    });
+
     // Reset input so same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = '';
+
+    // Upload to backend
+    try {
+      setImageUploadLoading(true);
+      const uploadResult = await uploadHeroImage(file);
+
+      // Update with the processed transparent PNG URL from backend
+      onChange('hero', {
+        ...data,
+        heroImage: uploadResult.heroImage,
+        heroImageFile: null, // Clear file reference after upload
+      });
+
+      // Show success message (you may want to add a toast here)
+      console.log('Image uploaded successfully:', uploadResult.heroImage);
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      setImageUploadError(error.message || 'Failed to upload image');
+      
+      // Reset to previous state on error
+      onChange('hero', {
+        ...data,
+        heroImage: data.heroImage, // Keep previous image
+        heroImageFile: null,
+      });
+    } finally {
+      setImageUploadLoading(false);
+    }
   };
 
   const removeImage = () => {
     onChange('hero', { ...data, heroImage: '', heroImageFile: null });
+    setImageUploadError('');
   };
 
   const isActive = data.isActive !== undefined ? data.isActive : true;
@@ -208,6 +245,12 @@ export default function HeroSection({ data, onChange, onSave, isSaving, isLoadin
             <div className="mt-1 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 flex flex-col items-center justify-center relative overflow-hidden group min-h-[300px] h-[calc(100%-1.75rem)] transition-colors hover:border-orange-300">
               {isLoading ? (
                 <div className="animate-pulse w-full h-full min-h-[300px] bg-gray-200 rounded-xl"></div>
+              ) : imageUploadLoading ? (
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <Loader2 size={32} className="text-orange-500 animate-spin" />
+                  <span className="text-sm font-medium text-gray-600">Processing image...</span>
+                  <span className="text-xs text-gray-500">Removing background...</span>
+                </div>
               ) : data.heroImage ? (
                 <>
                   <img
@@ -221,14 +264,16 @@ export default function HeroSection({ data, onChange, onSave, isSaving, isLoadin
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="bg-white text-blue-600 hover:text-blue-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm"
+                      disabled={imageUploadLoading}
+                      className="bg-white text-blue-600 hover:text-blue-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm"
                     >
                       <Upload size={14} /> Change
                     </button>
                     <button
                       type="button"
                       onClick={removeImage}
-                      className="bg-white text-red-500 hover:text-red-600 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm"
+                      disabled={imageUploadLoading}
+                      className="bg-white text-red-500 hover:text-red-600 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm"
                     >
                       <X size={14} /> Remove
                     </button>
@@ -239,6 +284,7 @@ export default function HeroSection({ data, onChange, onSave, isSaving, isLoadin
                     className="hidden"
                     accept="image/png,image/jpeg,image/webp"
                     onChange={handleImageChange}
+                    disabled={imageUploadLoading}
                   />
                 </>
               ) : (
@@ -248,16 +294,23 @@ export default function HeroSection({ data, onChange, onSave, isSaving, isLoadin
                   </div>
                   <span className="text-sm font-medium text-gray-600">Click to upload hero image</span>
                   <span className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP — max 5MB</span>
+                  <span className="text-xs text-gray-500 mt-3 text-center">Background will be automatically removed</span>
                   <input
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
                     accept="image/png,image/jpeg,image/webp"
                     onChange={handleImageChange}
+                    disabled={imageUploadLoading}
                   />
                 </label>
               )}
             </div>
+            {imageUploadError && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-xs text-red-600 font-medium">{imageUploadError}</p>
+              </div>
+            )}
           </div>
 
           {/* Label + Value pairs */}
@@ -335,4 +388,5 @@ export default function HeroSection({ data, onChange, onSave, isSaving, isLoadin
       )}
     </div>
   );
-}
+} 
+

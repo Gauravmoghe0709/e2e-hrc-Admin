@@ -27,6 +27,7 @@ const EMPTY_FORM = {
   title: '',
   highlightText: '',
   subtitle: '',
+  description: '',
   isActive: true,
 };
 
@@ -106,6 +107,7 @@ export default function BecomePartnerManagement() {
       title: record.title || '',
       highlightText: record.highlightText || '',
       subtitle: record.subtitle || '',
+      description: record.description || '',
       isActive: record.isActive !== undefined ? record.isActive : true,
     });
     setImageFile(null);
@@ -139,6 +141,9 @@ export default function BecomePartnerManagement() {
       payload.append('title', formData.title.trim());
       payload.append('highlightText', formData.highlightText.trim());
       payload.append('subtitle', formData.subtitle.trim());
+      if (formData.description !== undefined) {
+        payload.append('description', formData.description.trim());
+      }
       payload.append('isActive', String(formData.isActive));
       if (imageFile) {
         payload.append('image', imageFile);
@@ -311,6 +316,21 @@ export default function BecomePartnerManagement() {
                           placeholder='e.g. "Recruitment Partner"'
                         />
                         {errors.subtitle && <p className="text-red-500 text-xs mt-1">{errors.subtitle}</p>}
+                      </div>
+
+                      {/* Description */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Description
+                        </label>
+                        <textarea
+                          name="description"
+                          value={formData.description}
+                          onChange={handleChange}
+                          rows="4"
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors border-gray-200"
+                          placeholder='e.g. "Partner with e2e HRC to build a stronger and more capable workforce."'
+                        />
                       </div>
 
                       {/* Active Toggle */}

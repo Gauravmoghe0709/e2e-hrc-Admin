@@ -21,6 +21,7 @@ export default function EmployeeJourneyCardsManager() {
 
   const [formData, setFormData] = useState({
     title: "",
+    description: "",
     order: 0,
     isActive: true,
   });
@@ -46,6 +47,7 @@ export default function EmployeeJourneyCardsManager() {
   const resetForm = () => {
     setFormData({
       title: "",
+      description: "",
       order: cards.length + 1,
       isActive: true,
     });
@@ -57,6 +59,7 @@ export default function EmployeeJourneyCardsManager() {
       setEditingCard(card);
       setFormData({
         title: card.title,
+        description: card.description || "",
         order: card.order,
         isActive: card.isActive !== undefined ? card.isActive : true,
       });
@@ -279,6 +282,20 @@ export default function EmployeeJourneyCardsManager() {
                     required
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors"
                     placeholder="e.g. Register"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleFormChange}
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none transition-colors resize-y min-h-[90px]"
+                    placeholder="Enter card description (optional)"
                   />
                 </div>
 
